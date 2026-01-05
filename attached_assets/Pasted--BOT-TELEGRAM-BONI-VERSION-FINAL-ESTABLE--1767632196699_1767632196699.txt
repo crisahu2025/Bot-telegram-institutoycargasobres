@@ -1,0 +1,967 @@
+// ==================================================
+// BOT TELEGRAM BONI – VERSION FINAL ESTABLE
+// ==================================================
+
+const TELEGRAM_TOKEN = "8503063564:AAEWJNmL7i8GK8xcdsm3KYoFKWApsE-pw24";
+const SPREADSHEET_ID = "1_AtufxeQhg2IrMRWpHdhrafKEOYepsXa07mDDPm2lac";
+const DRIVE_FOLDER_ID = "1agh6iVBv-8eFSHrChnc8G-63nGkI0pWW";
+const DRIVE_FOLDER_MATRICULA = "1eJ_4TW436rr5QwDq-YP8kliZ3H43URqr"; // Carpeta de matrículas
+const DRIVE_FOLDER_MENSUALIDAD = "1yJCC4hdkZV9CQXr_Nb1pHKLr-E0CMb8F"; // Carpeta de pagos mensuales
+const EMAIL_REPORTE_GENERAL = "cris.ahu777@gmail.com"; 
+
+// ==================================================
+// TELEGRAM
+// ==================================================
+function sendMessage(chatId, text, keyboard = null, inlineKeyboard = null) {
+  const payload = { 
+    chat_id: chatId, 
+    text
+  };
+  if (keyboard) payload.reply_markup = keyboard;
+  if (inlineKeyboard) payload.reply_markup = inlineKeyboard;
+
+  UrlFetchApp.fetch(
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+    {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload)
+    }
+  );
+}
+
+// ==================================================
+// MEMORIA
+// ==================================================
+function getState(chatId) {
+  const d = PropertiesService.getUserProperties().getProperty(chatId);
+  return d ? JSON.parse(d) : {};
+}
+function setState(chatId, s) {
+  PropertiesService.getUserProperties().setProperty(chatId, JSON.stringify(s));
+}
+function clearState(chatId) {
+  PropertiesService.getUserProperties().deleteProperty(chatId);
+}
+
+// ==================================================
+// DATA
+// ==================================================
+function getSheets() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheets();
+}
+
+function getMinisteriosSheets() {
+  return getSheets().filter(s => 
+    s.getName() !== "PETICIONES" && 
+    s.getName() !== "NUEVOS DE ESPIGAS" && 
+    s.getName() !== "INSTITUTO DE AÑO" &&
+    s.getName() !== "INSTITUTO MATERIA VIRTUAL"
+  );
+}
+
+function getMinisteriosConInstituto() {
+  // Esta función ya no se usa, todas las hojas especiales están ocultas
+  return getMinisteriosSheets();
+}
+
+// ==================================================
+// VERIFICAR SI ES LÍDER AUTORIZADO
+// ==================================================
+function esLiderAutorizado(nombreLider, sheetName) {
+  const sheets = getSheets();
+  const sheet = sheets.find(s => s.getName() === sheetName);
+  if (!sheet) return false;
+  
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return false;
+  
+  const lideres = sheet.getRange(`H2:H${lastRow}`).getValues().flat().filter(String);
+  
+  // Buscar coincidencia (ignorando mayúsculas/minúsculas y espacios extras)
+  return lideres.some(lider => 
+    lider.toLowerCase().trim() === nombreLider.toLowerCase().trim()
+  );
+}
+
+// ==================================================
+// VALIDACIONES
+// ==================================================
+function esNumero(texto) {
+  return /^\d+$/.test(texto.trim());
+}
+
+function tieneLetras(texto) {
+  return /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(texto);
+}
+
+function soloNumeros(texto) {
+  return /^\d+(\.\d+)?$/.test(texto.trim());
+}
+
+// ==================================================
+// TECLADOS
+// ==================================================
+function mainKeyboard(mostrarConsulta = false) {
+  const botones = [];
+  
+  if (mostrarConsulta) {
+    botones.push([{ text: "Consultar líderes" }]);
+    botones.push([{ text: "📚 Inscripción al Instituto Bíblico Horeb" }]);
+  }
+  
+  botones.push([{ text: "Cargar sobre de espiga" }]);
+  botones.push([{ text: "🙏 Enviar petición de oración" }]);
+  botones.push([{ text: "Terminar" }]);
+  
+  return {
+    keyboard: botones,
+    resize_keyboard: true
+  };
+}
+
+function ministeriosKeyboard(incluirInstituto = false) {
+  // Siempre usar la función que excluye las hojas especiales
+  const sheets = getMinisteriosSheets();
+  const rows = sheets.map(s => [{ text: s.getName() }]);
+  rows.push([{ text: "Terminar" }]);
+  return { keyboard: rows, resize_keyboard: true };
+}
+
+function institutoOpcionesKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "Curso materias virtuales" }],
+      [{ text: "Curso el año" }],
+      [{ text: "Carga del comprobante de pago del mes" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+function institutoAñosKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "4 año los lunes" }],
+      [{ text: "5 año los lunes" }],
+      [{ text: "3 año los lunes" }],
+      [{ text: "4 año los viernes" }],
+      [{ text: "5 año los viernes" }],
+      [{ text: "3 año los viernes" }],
+      [{ text: "4 año los Sabados" }],
+      [{ text: "5 año los Sabados" }],
+      [{ text: "3 año los Sabados" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+function institutoMateriasKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "Materia virtual 1" }],
+      [{ text: "Materia virtual 2" }],
+      [{ text: "Materia virtual 3" }],
+      [{ text: "Materia virtual 4" }],
+      [{ text: "Materia virtual 5" }],
+      [{ text: "Materia virtual 6" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+function siNoKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "SI" }],
+      [{ text: "NO" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+// ==================================================
+// FOTO - MODIFICADO PARA SOPORTAR MÚLTIPLES CARPETAS
+// ==================================================
+function savePhoto(fileId, folderId = DRIVE_FOLDER_ID) {
+  const info = JSON.parse(
+    UrlFetchApp.fetch(
+      `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`
+    ).getContentText()
+  );
+
+  const blob = UrlFetchApp.fetch(
+    `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${info.result.file_path}`
+  ).getBlob();
+
+  const f = DriveApp.getFolderById(folderId).createFile(blob);
+  f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return f.getUrl();
+}
+
+// ==================================================
+// VERIFICAR SI MENCIONA PERSONA NUEVA
+// ==================================================
+function detectarPersonaNueva(texto) {
+  const textoLower = texto.toLowerCase();
+  return textoLower.includes("nuevo") || textoLower.includes("nueva");
+}
+
+// ==================================================
+// REGISTRAR PERSONA NUEVA
+// ==================================================
+function registrarPersonaNueva(textoAsistentes, userName) {
+  const sheets = getSheets();
+  const sheet = sheets.find(s => s.getName() === "NUEVOS DE ESPIGAS");
+  if (!sheet) return;
+  
+  const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+  
+  // Agregar registro en columnas A, B, C
+  sheet.appendRow([textoAsistentes, fechaHora, userName]);
+  
+  // Obtener emails de la columna D (desde D2 en adelante)
+  const lastRow = sheet.getLastRow();
+  const emails = sheet.getRange(`D2:D${lastRow}`).getValues().flat().filter(String);
+  
+  if (emails.length === 0) return;
+  
+  // Enviar mail a todos los destinatarios
+  const cuerpoMail = `Se detectó una persona nueva en una espiga.
+
+Datos de asistencia:
+${textoAsistentes}
+
+Usuario que registró:
+${userName}
+
+Fecha y hora:
+${fechaHora}
+`;
+  
+  emails.forEach(mail => {
+    MailApp.sendEmail(
+      mail,
+      "Se detectó una persona nueva en una espiga",
+      cuerpoMail
+    );
+  });
+}
+function esMotivoDeOracion(texto) {
+  const textoLower = texto.toLowerCase().trim();
+  const palabrasExcluidas = ["ninguna", "ninguno", "nada"];
+  return !palabrasExcluidas.some(palabra => textoLower.includes(palabra));
+}
+
+// ==================================================
+// ENVIAR PETICIÓN DE ORACIÓN
+// ==================================================
+function enviarPeticionOracion(motivo, userName) {
+  const sheets = getSheets();
+  const sheet = sheets.find(s => s.getName() === "PETICIONES");
+  const fechaHora = new Date();
+
+  sheet.appendRow([motivo, fechaHora, userName]);
+
+  const emailDestino = sheet.getRange("D2").getValue();
+
+  if (emailDestino) {
+    MailApp.sendEmail(
+      emailDestino,
+      "Nueva petición de oración (desde carga de espiga)",
+      `Se detectó una petición de oración durante la carga de espiga.
+
+Motivo:
+${motivo}
+
+Usuario:
+${userName}
+
+Fecha y hora:
+${fechaHora}
+`
+    );
+  }
+}
+
+// ==================================================
+// WEBHOOK
+// ==================================================
+function doPost(e) {
+  const update = JSON.parse(e.postData.contents);
+  if (!update.message) return;
+
+  const chatId = update.message.chat.id;
+  const userName =
+    update.message.from.first_name +
+    (update.message.from.last_name ? " " + update.message.from.last_name : "");
+
+  const text = update.message.text;
+  const state = getState(chatId);
+
+  // TERMINAR
+  if (text === "Terminar" || text === "❌ Cancelar") {
+    clearState(chatId);
+    sendMessage(chatId, "Proceso cancelado. Gracias por comunicarte con BONI 🙌", mainKeyboard(false));
+    return;
+  }
+
+  // VERIFICAR CÓDIGO DE ACCESO "Esteban2025"
+  if (text === "Esteban2025" && !state.step) {
+    setState(chatId, { accesoConsulta: true });
+    sendMessage(chatId, "Hola Soy BONI 🤍\n¿En qué te puedo ayudar hoy?", mainKeyboard(true));
+    return;
+  }
+
+  // BOTONES
+  if (text === "Consultar líderes") {
+    // Solo permitir si tiene acceso
+    if (!state.accesoConsulta) {
+      sendMessage(chatId, "No tenés acceso a esta función.", mainKeyboard(false));
+      return;
+    }
+    setState(chatId, { step: "consultar", accesoConsulta: true });
+    sendMessage(chatId, "Seleccioná un ministerio:", ministeriosKeyboard());
+    return;
+  }
+
+  if (text === "Cargar sobre de espiga") {
+    const nuevoState = { step: "cargar_ministerio" };
+    if (state.accesoConsulta) nuevoState.accesoConsulta = true;
+    setState(chatId, nuevoState);
+    sendMessage(chatId, "¿En qué ministerio estás liderando?", ministeriosKeyboard());
+    return;
+  }
+
+  if (text === "🙏 Enviar petición de oración") {
+    const nuevoState = { step: "peticion" };
+    if (state.accesoConsulta) nuevoState.accesoConsulta = true;
+    setState(chatId, nuevoState);
+    
+    // Obtener link de WhatsApp
+    const sheets = getSheets();
+    const sheet = sheets.find(s => s.getName() === "PETICIONES");
+    const whatsappLink = sheet.getRange("G2").getValue();
+    
+    const mensaje = "🙏 ¿Cuál es el motivo de tu petición de oración?\n\nSi preferís hablar directamente con alguien:";
+    
+    if (whatsappLink) {
+      // Mostrar con botón inline de WhatsApp
+      const inlineKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "💬 Abrir WhatsApp",
+              url: whatsappLink
+            }
+          ]
+        ]
+      };
+      sendMessage(chatId, mensaje, null, inlineKeyboard);
+      // Enviar teclado con Terminar por separado
+      Utilities.sleep(500);
+      sendMessage(chatId, "Podés escribir tu petición o usar el botón de WhatsApp 👆", peticionConWhatsAppKeyboard());
+    } else {
+      sendMessage(chatId, "🙏 ¿Cuál es el motivo de tu petición de oración?", peticionConWhatsAppKeyboard());
+    }
+    return;
+  }
+
+  // MENÚ
+  if (!state.step) {
+    sendMessage(chatId, "Hola Soy BONI 🤍\n¿En qué te puedo ayudar hoy?", mainKeyboard(false));
+    return;
+  }
+
+  const sheets = getSheets();
+
+  // ==================================================
+  // PETICIONES DE ORACIÓN + MAIL AUTOMÁTICO
+  // ==================================================
+  if (state.step === "peticion") {
+    const sheet = sheets.find(s => s.getName() === "PETICIONES");
+    const fechaHora = new Date();
+
+    sheet.appendRow([text, fechaHora, userName]);
+
+    const emailDestino = sheet.getRange("D2").getValue();
+
+    // MAIL (sin adjuntos)
+    if (emailDestino) {
+      MailApp.sendEmail(
+        emailDestino,
+        "Nueva petición de oración",
+        `Se recibió una nueva petición de oración.
+
+Motivo:
+${text}
+
+Usuario:
+${userName}
+
+Fecha y hora:
+${fechaHora}
+`
+      );
+    }
+
+    clearState(chatId);
+
+    // MENSAJE PASTORAL AL USUARIO
+    let respuesta =
+      "🙏 Gracias por compartir tu petición.\n" +
+      "Vamos a estar orando por vos 🤍";
+
+    sendMessage(chatId, respuesta, mainKeyboard(state.accesoConsulta || false));
+    return;
+  }
+
+  // ==================================================
+  // CONSULTAR LÍDERES
+  // ==================================================
+  if (state.step === "consultar") {
+    const sheet = sheets.find(s => s.getName() === text);
+    if (!sheet) return;
+
+    const lideres = sheet.getRange(`H2:H${sheet.getLastRow()}`).getValues().flat().filter(String);
+    const whatsappLink = sheet.getRange("O2").getValue(); // Columna O tiene el link completo
+
+    let msg = "👥 Líderes del ministerio:\n\n";
+    lideres.forEach(l => msg += `• ${l}\n`);
+    
+    if (whatsappLink) {
+      msg += "\n📲 Contacto disponible por WhatsApp";
+    } else {
+      msg += "\n⚠️ Contacto no disponible.";
+    }
+
+    clearState(chatId);
+    sendMessage(chatId, msg, mainKeyboard(true));
+    return;
+  }
+
+  // ==================================================
+  // CARGA DE ESPIGA
+  // ==================================================
+  if (state.step === "cargar_ministerio") {
+    state.sheetName = text;
+    state.step = "mentor";
+    setState(chatId, state);
+    sendMessage(chatId, "¿Quién es tu mentor?");
+    return;
+  }
+
+  if (state.step === "mentor") {
+    state.mentor = text;
+    state.step = "lider";
+    setState(chatId, state);
+    sendMessage(chatId, "¿Quién es el líder que carga el sobre?");
+    return;
+  }
+
+  if (state.step === "lider") {
+    // VALIDAR SI EL LÍDER ESTÁ AUTORIZADO
+    if (!esLiderAutorizado(text, state.sheetName)) {
+      state.intentosLider = (state.intentosLider || 0) + 1;
+      
+      if (state.intentosLider === 1) {
+        // Primer intento fallido - pedir nombre completo
+        setState(chatId, state);
+        sendMessage(chatId, "❌ No podés cargar el sobre, no estás habilitado como líder.\n\nPor favor, poné tu nombre completo:");
+        return;
+      } else {
+        // Segundo intento fallido - cancelar proceso
+        clearState(chatId);
+        sendMessage(chatId, "❌ No tenés autorización para cargar sobres en este ministerio.\nSolo los líderes registrados pueden hacerlo.", mainKeyboard(state.accesoConsulta || false));
+        return;
+      }
+    }
+    
+    // Si está autorizado, continuar
+    state.lider = text;
+    state.step = "asistentes";
+    delete state.intentosLider;
+    setState(chatId, state);
+    sendMessage(chatId, "¿Cuántas personas asistieron a la espiga y si hubo una persona nueva? (Ej: 8 personas - Nueva: Juan Pérez)");
+    return;
+  }
+
+  if (state.step === "asistentes") {
+    // VALIDAR QUE TENGA AL MENOS UNA LETRA
+    if (!tieneLetras(text)) {
+      sendMessage(chatId, "⚠️ Por favor, incluí al menos una letra en tu respuesta. No podés enviar solo números.\n\nEjemplo: 8 personas - Nueva: María");
+      return;
+    }
+    
+    state.asistentes = text;
+    state.step = "motivo";
+    setState(chatId, state);
+    sendMessage(chatId, "¿Faltó alguien a la espiga y tienen algún motivo de oración?");
+    return;
+  }
+
+  if (state.step === "motivo") {
+    // VALIDAR QUE NO SEA SOLO NÚMEROS
+    if (esNumero(text)) {
+      sendMessage(chatId, "⚠️ No podés enviar solo números. Por favor, escribí tu respuesta con texto.\n\nEjemplo: 2 ausencias - María está enferma");
+      return;
+    }
+    
+    state.motivo = text;
+    
+    // GUARDAR SI HAY MOTIVO DE ORACIÓN VÁLIDO (pero NO enviarlo todavía)
+    state.tieneMotivoOracion = esMotivoDeOracion(text);
+    
+    state.step = "ofrenda";
+    setState(chatId, state);
+    sendMessage(chatId, "¿Cuánto fue el monto de ofrenda? (solo números, ej: 5000)");
+    return;
+  }
+
+  if (state.step === "ofrenda") {
+    // VALIDAR QUE SEA SOLO NÚMEROS
+    if (!soloNumeros(text)) {
+      sendMessage(chatId, "⚠️ Por favor, ingresá solo números.\n\nEjemplo: 5000");
+      return;
+    }
+    
+    state.ofrenda = text;
+    state.step = "foto";
+    setState(chatId, state);
+    sendMessage(chatId, "Subí la foto del sobre de espiga.");
+    return;
+  }
+
+  if (update.message.photo && state.step === "foto") {
+    state.foto = savePhoto(update.message.photo.pop().file_id);
+    state.step = "confirmar";
+    setState(chatId, state);
+
+    sendMessage(
+      chatId,
+      `📌 Confirmá los datos:
+
+Ministerio: ${state.sheetName}
+Mentor: ${state.mentor}
+Líder: ${state.lider}
+Asistentes: ${state.asistentes}
+Ausencias/Motivo: ${state.motivo}
+Ofrenda: ${state.ofrenda}`,
+      confirmKeyboard()
+    );
+    return;
+  }
+
+  if (state.step === "confirmar" && text === "✅ Confirmar y guardar") {
+    const sheet = sheets.find(s => s.getName() === state.sheetName);
+    const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+
+    // Obtener la última fila para agregar datos
+    const lastRow = sheet.getLastRow() + 1;
+
+    // Columnas A-G (como antes)
+    sheet.getRange(lastRow, 1).setValue(state.mentor);        // A
+    sheet.getRange(lastRow, 2).setValue(state.lider);         // B
+    sheet.getRange(lastRow, 3).setValue(state.foto);          // C
+    sheet.getRange(lastRow, 4).setValue(state.motivo);        // D
+    sheet.getRange(lastRow, 5).setValue(fechaHora);           // E (con formato fecha y hora)
+    sheet.getRange(lastRow, 6).setValue(userName);            // F
+    sheet.getRange(lastRow, 7).setValue("");                  // G (enviado)
+
+    // Nuevas columnas M y N
+    sheet.getRange(lastRow, 13).setValue(state.asistentes);   // M (columna 13)
+    sheet.getRange(lastRow, 14).setValue(state.ofrenda);      // N (columna 14)
+
+    // DETECTAR Y REGISTRAR PERSONA NUEVA
+    if (detectarPersonaNueva(state.asistentes)) {
+      registrarPersonaNueva(state.asistentes, userName);
+    }
+
+    // AHORA SÍ, enviar petición de oración si había motivo válido
+    if (state.tieneMotivoOracion) {
+      enviarPeticionOracion(state.motivo, userName);
+    }
+
+    clearState(chatId);
+    sendMessage(chatId, "✅ Sobre de espiga cargada con éxito.\nGracias por tu fidelidad 🙏", mainKeyboard(state.accesoConsulta || false));
+  }
+
+  // ==================================================
+  // INSTITUTO BÍBLICO HOREB
+  // ==================================================
+  
+  // MENÚ INSTITUTO
+  if (state.step === "instituto_menu") {
+    if (text === "Curso el año") {
+      state.step = "instituto_año_nombre";
+      state.tipo = "año";
+      setState(chatId, state);
+      sendMessage(chatId, "Apellido y nombre completo del alumno a inscribirse:");
+      return;
+    }
+    
+    if (text === "Curso materias virtuales") {
+      state.step = "instituto_virtual_nombre";
+      state.tipo = "virtual";
+      setState(chatId, state);
+      sendMessage(chatId, "Apellido y nombre completo del alumno a inscribirse:");
+      return;
+    }
+    
+    if (text === "Carga del comprobante de pago del mes") {
+      state.step = "instituto_pago_nombre";
+      state.tipo = "pago";
+      state.intentos = 0;
+      setState(chatId, state);
+      sendMessage(chatId, "Apellido y nombre completo (Tiene que ser igual al que te inscribiste):");
+      return;
+    }
+  }
+
+  // CURSO EL AÑO
+  if (state.step === "instituto_año_nombre") {
+    if (!tieneLetras(text) || esNumero(text)) {
+      sendMessage(chatId, "⚠️ Solo podés escribir letras. Por favor, ingresá tu nombre completo:");
+      return;
+    }
+    state.nombreCompleto = text;
+    state.step = "instituto_año_curso";
+    setState(chatId, state);
+    sendMessage(chatId, "¿A qué año deseás inscribirte?", institutoAñosKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_año_curso") {
+    const cursosValidos = ["4 año los lunes", "5 año los lunes", "3 año los lunes", 
+                          "4 año los viernes", "5 año los viernes", "3 año los viernes",
+                          "4 año los Sabados", "5 año los Sabados", "3 año los Sabados"];
+    if (!cursosValidos.includes(text)) {
+      sendMessage(chatId, "⚠️ Por favor, seleccioná una opción válida:", institutoAñosKeyboard());
+      return;
+    }
+    state.curso = text;
+    state.step = "instituto_año_foto_matricula";
+    setState(chatId, state);
+    sendMessage(chatId, "Cargá la foto del comprobante de pago de matrícula:");
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_año_foto_matricula") {
+    state.fotoMatricula = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MATRICULA);
+    state.step = "instituto_año_foto_mes";
+    setState(chatId, state);
+    sendMessage(chatId, "Cargá la foto del comprobante del pago del mes:");
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_año_foto_mes") {
+    state.fotoMes = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MENSUALIDAD);
+    state.step = "instituto_año_confirmar";
+    setState(chatId, state);
+    sendMessage(chatId, `📌 Confirmá que todos los datos están correctos:
+
+Nombre: ${state.nombreCompleto}
+Curso: ${state.curso}
+Comprobante matrícula: Cargado ✅
+Comprobante mensual: Cargado ✅`, confirmarInstitutoKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_año_confirmar") {
+    if (text === "✅ Confirmar y guardar datos") {
+      const sheet = sheets.find(s => s.getName() === "INSTITUTO DE AÑO");
+      const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+      
+      sheet.appendRow([
+        state.nombreCompleto,  // A
+        state.curso,           // B
+        state.fotoMatricula,   // C
+        state.fotoMes,         // D
+        fechaHora,             // E
+        userName               // F
+      ]);
+      
+      clearState(chatId);
+      sendMessage(chatId, "✅ Te inscribiste correctamente al Instituto Horeb 2026", mainKeyboard(state.accesoConsulta || false));
+      return;
+    }
+    
+    if (text === "❌ Cancelar y volver a cargar los datos") {
+      state.step = "instituto_año_nombre";
+      delete state.nombreCompleto;
+      delete state.curso;
+      delete state.fotoMatricula;
+      delete state.fotoMes;
+      setState(chatId, state);
+      sendMessage(chatId, "Apellido y nombre completo del alumno a inscribirse:");
+      return;
+    }
+  }
+
+  // CURSO MATERIAS VIRTUALES
+  if (state.step === "instituto_virtual_nombre") {
+    if (!tieneLetras(text) || esNumero(text)) {
+      sendMessage(chatId, "⚠️ Solo podés escribir letras. Por favor, ingresá tu nombre completo:");
+      return;
+    }
+    state.nombreCompleto = text;
+    state.step = "instituto_virtual_materia";
+    setState(chatId, state);
+    sendMessage(chatId, "Materia virtual a la que vas a inscribirte:", institutoMateriasKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_virtual_materia") {
+    const materiasValidas = ["Materia virtual 1", "Materia virtual 2", "Materia virtual 3",
+                             "Materia virtual 4", "Materia virtual 5", "Materia virtual 6"];
+    if (!materiasValidas.includes(text)) {
+      sendMessage(chatId, "⚠️ Por favor, seleccioná una opción válida:", institutoMateriasKeyboard());
+      return;
+    }
+    state.materia = text;
+    state.step = "instituto_virtual_matricula_pregunta";
+    setState(chatId, state);
+    sendMessage(chatId, "¿Pagaste la matrícula de tu año que estás cursando?\n\n(Si la respuesta es SI no tenés que cargar el comprobante de la matrícula pero si la respuesta es NO vas a tener que cargar el comprobante de pago de la matrícula)", siNoKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_virtual_matricula_pregunta") {
+    if (text === "SI") {
+      state.pagoMatricula = "SI";
+      state.step = "instituto_virtual_foto_mes";
+      setState(chatId, state);
+      sendMessage(chatId, "Cargá el comprobante de pago de la materia (por que cada materia virtual que cursás tenés que pagar el mes completo):");
+      return;
+    }
+    
+    if (text === "NO") {
+      state.pagoMatricula = "NO";
+      state.step = "instituto_virtual_foto_matricula";
+      setState(chatId, state);
+      sendMessage(chatId, "Cargá el comprobante de matrícula anual:");
+      return;
+    }
+    
+    sendMessage(chatId, "⚠️ Por favor, seleccioná SI o NO:", siNoKeyboard());
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_virtual_foto_matricula") {
+    state.fotoMatricula = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MATRICULA);
+    state.step = "instituto_virtual_foto_mes";
+    setState(chatId, state);
+    sendMessage(chatId, "Cargá el comprobante de pago de la materia:");
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_virtual_foto_mes") {
+    state.fotoMes = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MENSUALIDAD);
+    state.step = "instituto_virtual_confirmar";
+    setState(chatId, state);
+    
+    let mensaje = `📌 Confirmá que todos los datos están correctos:
+
+Nombre: ${state.nombreCompleto}
+Materia: ${state.materia}
+Pagó matrícula anual: ${state.pagoMatricula}`;
+    
+    if (state.fotoMatricula) {
+      mensaje += "\nComprobante matrícula: Cargado ✅";
+    }
+    mensaje += "\nComprobante mensual: Cargado ✅";
+    
+    sendMessage(chatId, mensaje, confirmarInstitutoKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_virtual_confirmar") {
+    if (text === "✅ Confirmar y guardar datos") {
+      const sheet = sheets.find(s => s.getName() === "INSTITUTO MATERIA VIRTUAL");
+      const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+      
+      sheet.appendRow([
+        state.nombreCompleto,         // A
+        state.materia,                // B
+        state.pagoMatricula,          // C
+        state.fotoMatricula || "",    // D
+        state.fotoMes,                // E
+        fechaHora,                    // F
+        userName                      // G
+      ]);
+      
+      clearState(chatId);
+      sendMessage(chatId, "✅ Te inscribiste en la materia virtual con éxito", mainKeyboard(state.accesoConsulta || false));
+      return;
+    }
+    
+    if (text === "❌ Cancelar y volver a cargar los datos") {
+      clearState(chatId);
+      sendMessage(chatId, "Proceso cancelado.", mainKeyboard(state.accesoConsulta || false));
+      return;
+    }
+  }
+
+  // CARGA DE COMPROBANTE DE PAGO DEL MES
+  if (state.step === "instituto_pago_nombre") {
+    const resultado = buscarAlumnoInstituto(text);
+    
+    if (!resultado.encontrado) {
+      state.intentos = (state.intentos || 0) + 1;
+      
+      if (state.intentos >= 2) {
+        clearState(chatId);
+        sendMessage(chatId, "❌ No se encontró tu nombre en el sistema. Asegurate de escribir tu nombre exactamente como te inscribiste.", mainKeyboard(state.accesoConsulta || false));
+        return;
+      }
+      
+      setState(chatId, state);
+      sendMessage(chatId, "❌ El nombre es incorrecto. Volvé a escribir el Apellido y nombre tal cual te inscribiste:");
+      return;
+    }
+    
+    state.nombreCompleto = text;
+    state.hojaEncontrada = resultado.hoja;
+    state.step = "instituto_pago_foto";
+    setState(chatId, state);
+    sendMessage(chatId, "Cargá el comprobante de pago de este mes:");
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_pago_foto") {
+    state.fotoMes = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MENSUALIDAD);
+    state.step = "instituto_pago_confirmar";
+    setState(chatId, state);
+    sendMessage(chatId, `📌 Confirmá los datos ingresados:
+
+Nombre: ${state.nombreCompleto}
+Comprobante de pago: Cargado ✅`, confirmarInstitutoKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_pago_confirmar") {
+    if (text === "✅ Confirmar y guardar datos") {
+      const sheet = sheets.find(s => s.getName() === state.hojaEncontrada);
+      const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+      
+      // Buscar la fila del alumno y actualizar
+      const lastRow = sheet.getLastRow();
+      const nombres = sheet.getRange(`A2:A${lastRow}`).getValues();
+      
+      for (let i = 0; i < nombres.length; i++) {
+        if (nombres[i][0].toString().toLowerCase().trim() === state.nombreCompleto.toLowerCase().trim()) {
+          const rowNum = i + 2;
+          sheet.getRange(rowNum, 4).setValue(state.fotoMes);  // Columna D
+          sheet.getRange(rowNum, 5).setValue(fechaHora);      // Columna E
+          sheet.getRange(rowNum, 6).setValue(userName);        // Columna F
+          break;
+        }
+      }
+      
+      clearState(chatId);
+      sendMessage(chatId, "✅ Comprobante de pago cargado con éxito", mainKeyboard(state.accesoConsulta || false));
+      return;
+    }
+    
+    if (text === "❌ Cancelar y volver a cargar los datos") {
+      clearState(chatId);
+      sendMessage(chatId, "Proceso cancelado.", mainKeyboard(state.accesoConsulta || false));
+      return;
+    }
+  }
+}
+
+// ==================================================
+// MAILS AUTOMÁTICOS POR MINISTERIO (TRIGGER)
+// ==================================================
+function enviarMailsPendientes() {
+  const sheets = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets();
+
+  sheets.forEach(sheet => {
+    const sheetName = sheet.getName();
+
+    // Omitir hoja de peticiones
+    if (sheetName === "PETICIONES") return;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+
+    // Datos: A-G + M-N
+    const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+
+    // Correos del ministerio (columna I)
+    const emails = sheet
+      .getRange(`I2:I${sheet.getLastRow()}`)
+      .getValues()
+      .flat()
+      .filter(String);
+
+    if (emails.length === 0) return;
+
+    data.forEach((row, index) => {
+      const [mentor, lider, foto, motivo, fechaHora, usuario, enviado, , , , , , asistentes, ofrenda] = row;
+
+      // Si ya fue enviado, no repetir
+      if (enviado === "SI") return;
+
+      const cuerpoMail =
+`Se registró una nueva espiga.
+
+Ministerio: ${sheetName}
+Mentor: ${mentor}
+Líder: ${lider}
+Usuario Telegram: ${usuario}
+Fecha y hora: ${fechaHora}
+
+Asistentes y persona nueva:
+${asistentes || "No especificado"}
+
+Ausencias y motivo de oración:
+${motivo}
+
+Monto de ofrenda:
+${ofrenda || "No especificado"}
+
+Link del sobre (Google Drive):
+${foto}
+`;
+
+      emails.forEach(mail => {
+        MailApp.sendEmail(
+          mail,
+          `Nueva espiga cargada – ${sheetName}`,
+          cuerpoMail
+        );
+      });
+
+      // Marcar como enviado (columna G)
+      sheet.getRange(index + 2, 7).setValue("SI");
+    });
+  });
+}
+
+// ==================================================
+// REPORTE SEMANAL GENERAL
+// ==================================================
+function enviarReporteSemanalGeneral() {
+  const sheets = getMinisteriosSheets();
+  const hoy = new Date();
+  const desde = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  let cuerpo = "Reporte semanal de ministerios\n\n";
+
+  sheets.forEach(sheet => {
+    const fechas = sheet.getRange(2, 5, sheet.getLastRow() - 1, 1).getValues();
+    const cantidad = fechas.filter(f => f[0] instanceof Date && f[0] >= desde).length;
+    cuerpo += `${sheet.getName()}: ${cantidad > 0 ? cantidad + " sobres cargados" : "no registró cargas"}\n`;
+  });
+
+  MailApp.sendEmail(
+    EMAIL_REPORTE_GENERAL,
+    "Reporte semanal de ministerios",
+    cuerpo
+  );
+}
