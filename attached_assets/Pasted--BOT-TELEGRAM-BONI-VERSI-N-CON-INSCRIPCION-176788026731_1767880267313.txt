@@ -1,0 +1,383 @@
+// ==================================================
+// BOT TELEGRAM BONI – VERSIÓN CON INSCRIPCIONES POR MATERIAS
+// ==================================================
+
+const TELEGRAM_TOKEN = "8557005763:AAFs3AvvarCmiDYHxBAkQZuKcOUOBOmDVis";
+const SPREADSHEET_ID = "1_AtufxeQhg2IrMRWpHdhrafKEOYepsXa07mDDPm2lac";
+const DRIVE_FOLDER_ID = "1agh6iVBv-8eFSHrChnc8G-63nGkI0pWW"; // Sobres de espiga
+const DRIVE_FOLDER_MATRICULA = "1eJ_4TW436rr5QwDq-YP8kliZ3H43URqr"; // Matrículas
+const DRIVE_FOLDER_MENSUALIDAD = "1yJCC4hdkZV9CQXr_Nb1pHKLr-E0CMb8F"; // Pagos mensuales
+const EMAIL_REPORTE_GENERAL = "cris.ahu777@gmail.com"; 
+const EMAIL_NOTIFICACION_INSTITUTO = "cris.ahu777@gmail.com";
+
+// ==================================================
+// TELEGRAM (igual)
+// ==================================================
+// ... (sendMessage queda igual)
+
+// ==================================================
+// MEMORIA (igual)
+// ==================================================
+// ... (getState, setState, clearState iguales)
+
+// ==================================================
+// DATA
+// ==================================================
+function getSheets() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheets();
+}
+
+function getMinisteriosSheets() {
+  return getSheets().filter(s => {
+    const name = s.getName();
+    const excluidas = [
+      "PETICIONES",
+      "NUEVOS DE ESPIGAS",
+      "INSCRIPCIONES",
+      "MATERIAS_OFICIALES",
+      "PAGOS"
+    ];
+    return !excluidas.includes(name);
+  });
+}
+
+// Nueva función para leer materias oficiales
+function getMateriasPorAno(ano = null) {
+  const sheet = getSheets().find(s => s.getName() === "MATERIAS_OFICIALES");
+  if (!sheet) return [];
+  
+  const data = sheet.getDataRange().getValues().slice(1); // Saltar header
+  if (ano) {
+    return data.filter(row => row[0] === ano).map(row => row[1]); // [Año, Materia]
+  }
+  return data.map(row => ({ ano: row[0], materia: row[1] })); // Todas
+}
+
+// ==================================================
+// VERIFICAR LÍDER (igual)
+// ==================================================
+// ... (esLiderAutorizado igual)
+
+// ==================================================
+// VALIDACIONES (igual)
+// ==================================================
+// ... (esNumero, tieneLetras, soloNumeros iguales)
+
+// ==================================================
+// TECLADOS
+// ==================================================
+function mainKeyboard() { // Igual
+  // ...
+}
+
+function ministeriosKeyboard() { // Usa el filtro actualizado
+  const rows = getMinisteriosSheets().map(s => [{ text: s.getName() }]);
+  rows.push([{ text: "Terminar" }]);
+  return { keyboard: rows, resize_keyboard: true };
+}
+
+function institutoOpcionesKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "Inscribirse a año/materias" }],
+      [{ text: "Carga del comprobante de pago del mes" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+// Teclado dinámico para años
+function institutoAnosKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "Primer Año" }],
+      [{ text: "Segundo Año" }],
+      [{ text: "Tercer Año" }],
+      [{ text: "Cuarto Año" }],
+      [{ text: "Quinto Año" }],
+      [{ text: "Sexto Año" }],
+      [{ text: "Séptimo Año" }],
+      [{ text: "Octavo Año" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+// Teclado para materias (dinámico por año o todas para extras)
+function materiasKeyboard(anoPrincipal) {
+  const materiasPrincipales = getMateriasPorAno(anoPrincipal).map(m => [{ text: m }]);
+  const extras = [{ text: "Agregar materia extra de otro año" }];
+  const confirmar = [{ text: "Confirmar materias seleccionadas" }];
+  return { keyboard: [...materiasPrincipales, ...extras, confirmar], resize_keyboard: true };
+}
+
+// Teclado para extras (todos los años)
+function extrasKeyboard() {
+  const allMaterias = getMateriasPorAno().map(m => [{ text: `${m.materia} (${m.ano})` }]);
+  const done = [{ text: "Terminar extras" }];
+  return { keyboard: [...allMaterias.slice(0, 20), done], resize_keyboard: true }; // Limitar si muchas
+}
+
+// ... (otros teclados iguales: siNo, confirm, etc.)
+
+// ==================================================
+// FOTO (igual)
+// ==================================================
+// ... (savePhoto igual)
+
+// ==================================================
+// PERSONA NUEVA Y PETICIONES (igual)
+// ==================================================
+// ... (iguales)
+
+// ==================================================
+// BUSCAR ALUMNO (adaptado para nueva hoja)
+// ==================================================
+function buscarAlumnoInstituto(nombre) {
+  const sheet = getSheets().find(s => s.getName() === "INSCRIPCIONES");
+  if (!sheet) return { encontrado: false };
+  
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { encontrado: false };
+  
+  const nombres = sheet.getRange(`A2:A${lastRow}`).getValues().flat();
+  for (let i = 0; i < nombres.length; i++) {
+    if (nombres[i].toLowerCase().trim() === nombre.toLowerCase().trim()) {
+      return { encontrado: true, row: i + 2 };
+    }
+  }
+  return { encontrado: false };
+}
+
+// ==================================================
+// WEBHOOK (cambios principales aquí)
+// ==================================================
+function doPost(e) {
+  // ... (parte inicial igual: parse update, chatId, userName, text, state)
+
+  // ... (cancelar, acceso código, botones principales iguales)
+
+  if (text === "📚 Inscripción al Instituto Bíblico Horeb") {
+    setState(chatId, { step: "instituto_menu" });
+    sendMessage(chatId, "Seleccioná una opción:", institutoOpcionesKeyboard());
+    return;
+  }
+
+  // ... (petición oración, carga espiga iguales)
+
+  // INSTITUTO NUEVO FLUJO
+  if (state.step === "instituto_menu") {
+    if (text === "Inscribirse a año/materias") {
+      state.step = "instituto_nombre";
+      state.materias = []; // Array para múltiples
+      setState(chatId, state);
+      sendMessage(chatId, "Apellido y nombre completo del alumno:");
+      return;
+    }
+    if (text === "Carga del comprobante de pago del mes") {
+      state.step = "instituto_pago_nombre";
+      state.intentos = 0;
+      setState(chatId, state);
+      sendMessage(chatId, "Apellido y nombre completo (exacto):");
+      return;
+    }
+  }
+
+  // Inscripción: Nombre
+  if (state.step === "instituto_nombre") {
+    if (!tieneLetras(text)) {
+      sendMessage(chatId, "⚠️ Nombre válido con letras:");
+      return;
+    }
+    state.nombreCompleto = text;
+    state.step = "instituto_ano_principal";
+    setState(chatId, state);
+    sendMessage(chatId, "¿Cuál es tu año principal?", institutoAnosKeyboard());
+    return;
+  }
+
+  // Año principal
+  if (state.step === "instituto_ano_principal") {
+    const validos = ["Primer Año", "Segundo Año", "Tercer Año", "Cuarto Año", "Quinto Año", "Sexto Año", "Séptimo Año", "Octavo Año"];
+    if (!validos.includes(text)) {
+      sendMessage(chatId, "⚠️ Seleccioná un año válido:", institutoAnosKeyboard());
+      return;
+    }
+    state.anoPrincipal = text;
+    state.step = "instituto_seleccionar_materias";
+    setState(chatId, state);
+    sendMessage(chatId, `Seleccioná materias de ${text}. Podés agregar extras después:`, materiasKeyboard(state.anoPrincipal));
+    return;
+  }
+
+  // Selección de materias (loop para múltiples)
+  if (state.step === "instituto_seleccionar_materias") {
+    if (text === "Confirmar materias seleccionadas") {
+      if (state.materias.length === 0) {
+        sendMessage(chatId, "⚠️ Seleccioná al menos una materia.");
+        return;
+      }
+      state.step = "instituto_matricula_pregunta";
+      setState(chatId, state);
+      sendMessage(chatId, "¿Pagaste la matrícula anual?", siNoKeyboard());
+      return;
+    }
+    if (text === "Agregar materia extra de otro año") {
+      state.step = "instituto_extras";
+      setState(chatId, state);
+      sendMessage(chatId, "Seleccioná materia extra:", extrasKeyboard());
+      return;
+    }
+    // Agregar materia principal
+    const materiasValidas = getMateriasPorAno(state.anoPrincipal);
+    if (materiasValidas.includes(text) && !state.materias.includes(text)) {
+      state.materias.push(text);
+      setState(chatId, state);
+      sendMessage(chatId, `Agregada: ${text}. Seleccioná más o confirma:`, materiasKeyboard(state.anoPrincipal));
+      return;
+    }
+    sendMessage(chatId, "⚠️ Materia no válida para este año.");
+    return;
+  }
+
+  // Extras (loop)
+  if (state.step === "instituto_extras") {
+    if (text === "Terminar extras") {
+      state.step = "instituto_seleccionar_materias";
+      setState(chatId, state);
+      sendMessage(chatId, "Vuelve a selección principal:", materiasKeyboard(state.anoPrincipal));
+      return;
+    }
+    // Agregar extra (validar que exista)
+    const allMaterias = getMateriasPorAno();
+    const materiaSeleccionada = allMaterias.find(m => `${m.materia} (${m.ano})` === text);
+    if (materiaSeleccionada && !state.materias.includes(materiaSeleccionada.materia)) {
+      state.materias.push(materiaSeleccionada.materia + ` (extra de ${materiaSeleccionada.ano})`);
+      setState(chatId, state);
+      sendMessage(chatId, `Agregada extra: ${text}. Seleccioná más o termina:`, extrasKeyboard());
+      return;
+    }
+    sendMessage(chatId, "⚠️ Materia no válida.");
+    return;
+  }
+
+  // Matrícula pregunta
+  if (state.step === "instituto_matricula_pregunta") {
+    if (text === "SI") {
+      state.pagoMatricula = "SI";
+      state.step = "instituto_foto_mes";
+      setState(chatId, state);
+      sendMessage(chatId, "Cargá comprobante de pago inicial/mensual:");
+      return;
+    }
+    if (text === "NO") {
+      state.pagoMatricula = "NO";
+      state.step = "instituto_foto_matricula";
+      setState(chatId, state);
+      sendMessage(chatId, "Cargá comprobante de matrícula:");
+      return;
+    }
+    sendMessage(chatId, "⚠️ SI o NO:", siNoKeyboard());
+    return;
+  }
+
+  // Fotos (igual que antes, pero adaptado)
+  if (update.message.photo && state.step === "instituto_foto_matricula") {
+    state.fotoMatricula = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MATRICULA);
+    state.step = "instituto_foto_mes";
+    setState(chatId, state);
+    sendMessage(chatId, "Cargá comprobante de pago inicial/mensual:");
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_foto_mes") {
+    state.fotoMes = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MENSUALIDAD);
+    state.step = "instituto_confirmar";
+    setState(chatId, state);
+    const msg = `📌 Confirmá:\n\nNombre: ${state.nombreCompleto}\nAño Principal: ${state.anoPrincipal}\nMaterias: ${state.materias.join(", ")}\nPagó Matrícula: ${state.pagoMatricula}\nPagos: ✅`;
+    sendMessage(chatId, msg, confirmarInstitutoKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_confirmar" && text === "✅ Confirmar y guardar datos") {
+    const sheet = sheets.find(s => s.getName() === "INSCRIPCIONES");
+    const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+    sheet.appendRow([
+      state.nombreCompleto,
+      state.anoPrincipal,
+      state.materias.join(", "),
+      fechaHora,
+      userName,
+      state.fotoMatricula || "",
+      state.fotoMes || ""
+    ]);
+
+    // Notificación por mail (como antes)
+    const cuerpoMail = `
+Nueva inscripción al Instituto Horeb
+
+Nombre: ${state.nombreCompleto}
+Año Principal: ${state.anoPrincipal}
+Materias: ${state.materias.join(", ")}
+Pagó Matrícula: ${state.pagoMatricula}
+Fecha: ${fechaHora}
+Usuario: ${userName}
+
+Links: Matrícula ${state.fotoMatricula || "No"}, Mensual ${state.fotoMes}
+    `.trim();
+    MailApp.sendEmail(EMAIL_NOTIFICACION_INSTITUTO, "🆕 Nueva Inscripción Horeb", cuerpoMail);
+
+    clearState(chatId);
+    sendMessage(chatId, "✅ Inscripción exitosa. ¡Bienvenido!", mainKeyboard());
+    return;
+  }
+
+  // Pago mensual (adaptado)
+  if (state.step === "instituto_pago_nombre") {
+    const resultado = buscarAlumnoInstituto(text);
+    if (!resultado.encontrado) {
+      // ... (intentos iguales)
+    }
+    state.nombreCompleto = text;
+    state.row = resultado.row;
+    state.step = "instituto_pago_foto";
+    setState(chatId, state);
+    sendMessage(chatId, "Cargá comprobante de este mes:");
+    return;
+  }
+
+  if (update.message.photo && state.step === "instituto_pago_foto") {
+    state.fotoMes = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MENSUALIDAD);
+    state.step = "instituto_pago_confirmar";
+    setState(chatId, state);
+    sendMessage(chatId, `📌 Confirmá:\n\nNombre: ${state.nombreCompleto}\nComprobante: ✅`, confirmarInstitutoKeyboard());
+    return;
+  }
+
+  if (state.step === "instituto_pago_confirmar" && text === "✅ Confirmar y guardar datos") {
+    const sheet = sheets.find(s => s.getName() === "INSCRIPCIONES");
+    const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+    // Actualizar columna de pagos mensuales (asumí columna G para último pago)
+    sheet.getRange(state.row, 7).setValue(state.fotoMes); // Ajustá columna si necesario
+    sheet.getRange(state.row, 4).setValue(fechaHora); // Actualizar fecha
+
+    // Mail
+    const cuerpoMailPago = `
+Nuevo pago mensual (Horeb)
+
+Nombre: ${state.nombreCompleto}
+Fecha: ${fechaHora}
+Usuario: ${userName}
+Link: ${state.fotoMes}
+    `.trim();
+    MailApp.sendEmail(EMAIL_NOTIFICACION_INSTITUTO, "💰 Nuevo Pago Horeb", cuerpoMailPago);
+
+    clearState(chatId);
+    sendMessage(chatId, "✅ Pago cargado.", mainKeyboard());
+    return;
+  }
+
+  // ... (resto: mails pendientes, reporte semanal iguales, pero ajustá si agregás "PAGOS")
+}
