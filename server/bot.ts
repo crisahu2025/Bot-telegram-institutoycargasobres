@@ -118,7 +118,7 @@ export function startBot() {
       const isValid = authorizedLeaders.some(l => l.name.toLowerCase() === text.toLowerCase());
       
       if (!isValid) {
-        await bot.sendMessage(chatId, "Lo siento, ese nombre no está autorizado en la columna H. No podés cargar el sobre.", { reply_markup: mainKeyboard() });
+        await bot.sendMessage(chatId, "No te encuentro en la lista de líderes para cargar el sobre.", { reply_markup: mainKeyboard() });
         await storage.updateBotUserStep(telegramId, null);
       } else {
         await storage.updateBotUserStep(telegramId, "env_people_count", { leader_name: text });
