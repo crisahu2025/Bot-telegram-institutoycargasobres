@@ -24,6 +24,7 @@ export const prayer_requests = pgTable("prayer_requests", {
   telegram_id: text("telegram_id").notNull(),
   user_name: text("user_name").notNull(),
   content: text("content").notNull(),
+  status: text("status").default("pending"),
   created_at: timestamp("created_at").defaultNow(),
 });
 
@@ -31,6 +32,7 @@ export const prayer_requests = pgTable("prayer_requests", {
 export const ministries = pgTable("ministries", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
+  whatsapp_link: text("whatsapp_link"),
 });
 
 // Leaders (Authorized leaders for envelope loading)
@@ -38,6 +40,7 @@ export const leaders = pgTable("leaders", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   ministry_id: integer("ministry_id").references(() => ministries.id),
+  active: boolean("active").default(true),
 });
 
 // Envelope Loads (Carga de Sobres)

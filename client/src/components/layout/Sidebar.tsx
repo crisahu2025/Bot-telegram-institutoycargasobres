@@ -14,12 +14,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/ministries", label: "Ministries", icon: Church },
-  { href: "/leaders", label: "Leaders", icon: Users },
-  { href: "/requests", label: "Prayer Requests", icon: HeartHandshake },
-  { href: "/envelopes", label: "Envelope Loads", icon: Mail },
-  { href: "/new-people", label: "New People", icon: UserPlus },
+  { href: "/", label: "Panel Control", icon: LayoutDashboard },
+  { href: "/ministries", label: "Ministerios", icon: Church },
+  { href: "/leaders", label: "Líderes", icon: Users },
+  { href: "/requests", label: "Peticiones de Oración", icon: HeartHandshake },
+  { href: "/envelopes", label: "Carga de Sobres", icon: Mail },
+  { href: "/new-people", label: "Personas Nuevas", icon: UserPlus },
 ];
 
 export function Sidebar() {
@@ -30,9 +30,9 @@ export function Sidebar() {
     <div className="flex flex-col h-full bg-card/50 backdrop-blur-sm border-r border-border">
       <div className="p-6 border-b border-border/50">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Church Bot
+          Boni Admin
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Admin Dashboard</p>
+        <p className="text-sm text-muted-foreground mt-1">Panel de Administración</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
@@ -59,13 +59,13 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-border/50">
         <div className="p-4 rounded-xl bg-gradient-to-br from-accent/10 to-primary/5 border border-accent/10">
-          <p className="text-xs font-medium text-accent-foreground mb-1">Status</p>
+          <p className="text-xs font-medium text-accent-foreground mb-1">Estado</p>
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-sm text-muted-foreground">Bot is Online</span>
+            <span className="text-sm text-muted-foreground">Bot en Línea</span>
           </div>
         </div>
       </div>

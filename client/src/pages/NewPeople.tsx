@@ -13,8 +13,8 @@ export default function NewPeople() {
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="New People" 
-        description="List of new visitors and converts registered via bot." 
+        title="Personas Nuevas" 
+        description="Lista de nuevos visitantes y conversos registrados a través del bot." 
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -27,27 +27,27 @@ export default function NewPeople() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground truncate">Telegram ID: {person.telegram_id}</p>
                 <p className="text-xs text-muted-foreground">
-                  Recorded by: <span className="font-semibold">{person.recorded_by}</span>
+                  Registrado por: <span className="font-semibold">{person.recorded_by}</span>
                 </p>
               </div>
             </div>
             
             <div className="flex-1 space-y-2">
-              <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Details</h4>
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Detalles</h4>
               <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed bg-secondary/30 p-3 rounded-lg">
                 {person.details}
               </p>
             </div>
             
             <div className="mt-4 pt-3 text-xs text-right text-muted-foreground">
-              Added {person.created_at ? format(new Date(person.created_at), 'PPP') : 'Unknown date'}
+              Agregado el {person.created_at ? format(new Date(person.created_at), 'd MMM, yyyy') : 'Fecha desconocida'}
             </div>
           </div>
         ))}
         
         {people?.length === 0 && (
           <div className="col-span-full p-12 text-center border-2 border-dashed border-border rounded-2xl">
-            <p className="text-muted-foreground">No new people registered yet.</p>
+            <p className="text-muted-foreground">No hay personas nuevas registradas aún.</p>
           </div>
         )}
       </div>

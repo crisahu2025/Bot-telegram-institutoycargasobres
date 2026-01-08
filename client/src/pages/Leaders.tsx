@@ -26,8 +26,8 @@ export default function Leaders() {
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="Leaders" 
-        description="Manage ministry leaders and their assignments."
+        title="Líderes" 
+        description="Administra los líderes de los ministerios y sus asignaciones."
       >
         <CreateLeaderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
       </PageHeader>
@@ -35,14 +35,14 @@ export default function Leaders() {
       <div className="flex items-center gap-4 mb-6">
         <div className="flex items-center gap-2 text-muted-foreground bg-secondary/50 px-3 py-2 rounded-lg">
           <Filter className="w-4 h-4" />
-          <span className="text-sm font-medium">Filter by:</span>
+          <span className="text-sm font-medium">Filtrar por:</span>
         </div>
         <Select value={selectedMinistry} onValueChange={setSelectedMinistry}>
           <SelectTrigger className="w-[200px] bg-background">
-            <SelectValue placeholder="All Ministries" />
+            <SelectValue placeholder="Todos los Ministerios" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Ministries</SelectItem>
+            <SelectItem value="all">Todos los Ministerios</SelectItem>
             {ministries?.map((m) => (
               <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
             ))}
@@ -55,10 +55,10 @@ export default function Leaders() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border/50 bg-secondary/20">
-                <th className="p-4 font-semibold text-foreground">Name</th>
-                <th className="p-4 font-semibold text-foreground">Ministry</th>
-                <th className="p-4 font-semibold text-foreground">Status</th>
-                <th className="p-4 font-semibold text-foreground text-right">Actions</th>
+                <th className="p-4 font-semibold text-foreground">Nombre</th>
+                <th className="p-4 font-semibold text-foreground">Ministerio</th>
+                <th className="p-4 font-semibold text-foreground">Estado</th>
+                <th className="p-4 font-semibold text-foreground text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -80,25 +80,25 @@ export default function Leaders() {
                           {ministryName}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground italic">None</span>
+                        <span className="text-muted-foreground italic">Ninguno</span>
                       )}
                     </td>
                     <td className="p-4">
                       {leader.active ? (
                         <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
                           <CheckCircle2 className="w-4 h-4" />
-                          Active
+                          Activo
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
                           <XCircle className="w-4 h-4" />
-                          Inactive
+                          Inactivo
                         </div>
                       )}
                     </td>
                     <td className="p-4 text-right">
                       <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        Edit
+                        Editar
                       </Button>
                     </td>
                   </tr>
@@ -107,7 +107,7 @@ export default function Leaders() {
               {leaders?.length === 0 && (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                    No leaders found matching the criteria.
+                    No se encontraron líderes que coincidan.
                   </td>
                 </tr>
               )}
@@ -136,7 +136,7 @@ function CreateLeaderDialog({ open, onOpenChange }: { open: boolean, onOpenChang
   const onSubmit = (data: z.infer<typeof insertLeaderSchema>) => {
     createMutation.mutate(data, {
       onSuccess: () => {
-        toast({ title: "Success", description: "Leader created successfully" });
+        toast({ title: "Éxito", description: "Líder creado correctamente" });
         onOpenChange(false);
         form.reset();
       },
@@ -151,25 +151,25 @@ function CreateLeaderDialog({ open, onOpenChange }: { open: boolean, onOpenChang
       <DialogTrigger asChild>
         <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40">
           <Plus className="w-4 h-4" />
-          Add Leader
+          Agregar Líder
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Leader</DialogTitle>
+          <DialogTitle>Agregar Nuevo Líder</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" {...form.register("name")} placeholder="John Doe" />
+            <Label htmlFor="name">Nombre Completo</Label>
+            <Input id="name" {...form.register("name")} placeholder="Juan Pérez" />
             {form.formState.errors.name && <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>}
           </div>
           
           <div className="space-y-2">
-            <Label>Ministry</Label>
+            <Label>Ministerio</Label>
             <Select onValueChange={(val) => form.setValue("ministry_id", parseInt(val))}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a ministry" />
+                <SelectValue placeholder="Seleccionar ministerio" />
               </SelectTrigger>
               <SelectContent>
                 {ministries?.map((m) => (
@@ -181,7 +181,7 @@ function CreateLeaderDialog({ open, onOpenChange }: { open: boolean, onOpenChang
 
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Create Leader"}
+              {createMutation.isPending ? "Creando..." : "Crear Líder"}
             </Button>
           </div>
         </form>

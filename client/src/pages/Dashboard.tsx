@@ -23,26 +23,25 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="Dashboard" 
-        description="Overview of your church bot activity." 
+        title="Panel Control" 
+        description="Resumen de actividad del bot de la iglesia." 
       />
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          label="Total Prayer Requests"
+          label="Total Peticiones"
           value={requests?.length || 0}
           icon={HeartHandshake}
           iconColor="text-rose-500"
         />
         <StatCard
-          label="Envelope Loads"
+          label="Carga de Sobres"
           value={envelopes?.length || 0}
           icon={Mail}
           iconColor="text-blue-500"
         />
         <StatCard
-          label="Active Ministries"
+          label="Ministerios Activos"
           value={ministries?.length || 0}
           icon={Church}
           iconColor="text-amber-500"
@@ -54,10 +53,10 @@ export default function Dashboard() {
         {/* Recent Prayer Requests */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col">
           <div className="p-6 border-b border-border/50 flex items-center justify-between">
-            <h3 className="font-bold text-lg">Recent Prayer Requests</h3>
+            <h3 className="font-bold text-lg">Peticiones Recientes</h3>
             <Link href="/requests">
               <span className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer transition-colors">
-                View all <ArrowRight className="w-4 h-4" />
+                Ver todas <ArrowRight className="w-4 h-4" />
               </span>
             </Link>
           </div>
@@ -70,14 +69,14 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground line-clamp-2">{req.content}</p>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                    {req.created_at ? format(new Date(req.created_at), 'MMM d, h:mm a') : 'Just now'}
+                    {req.created_at ? format(new Date(req.created_at), 'MMM d, h:mm a') : 'Ahora'}
                   </span>
                 </div>
               </div>
             ))}
             {(!requests || requests.length === 0) && (
               <div className="p-8 text-center text-muted-foreground">
-                No requests found.
+                No se encontraron peticiones.
               </div>
             )}
           </div>
@@ -86,10 +85,10 @@ export default function Dashboard() {
         {/* Recent Envelope Loads */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col">
           <div className="p-6 border-b border-border/50 flex items-center justify-between">
-            <h3 className="font-bold text-lg">Recent Envelopes</h3>
+            <h3 className="font-bold text-lg">Sobres Recientes</h3>
             <Link href="/envelopes">
               <span className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer transition-colors">
-                View all <ArrowRight className="w-4 h-4" />
+                Ver todos <ArrowRight className="w-4 h-4" />
               </span>
             </Link>
           </div>
@@ -101,22 +100,22 @@ export default function Dashboard() {
                     <p className="font-medium text-foreground">{env.user_name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                        {env.ministry_name || "Unknown Ministry"}
+                        {env.ministry_name || "Ministerio Desconocido"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Leader: {env.leader_name}
+                        Líder: {env.leader_name}
                       </span>
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                    {env.created_at ? format(new Date(env.created_at), 'MMM d') : 'Just now'}
+                    {env.created_at ? format(new Date(env.created_at), 'MMM d') : 'Ahora'}
                   </span>
                 </div>
               </div>
             ))}
             {(!envelopes || envelopes.length === 0) && (
               <div className="p-8 text-center text-muted-foreground">
-                No envelopes found.
+                No se encontraron sobres.
               </div>
             )}
           </div>

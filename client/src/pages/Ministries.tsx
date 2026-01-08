@@ -23,8 +23,8 @@ export default function Ministries() {
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="Ministries" 
-        description="Manage the different ministries in the church."
+        title="Ministerios" 
+        description="Administra los diferentes ministerios de la iglesia."
       >
         <CreateMinistryDialog open={isOpen} onOpenChange={setIsOpen} />
       </PageHeader>
@@ -51,7 +51,7 @@ export default function Ministries() {
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-green-600 transition-colors mt-2"
               >
                 <MessageCircle className="w-4 h-4" />
-                WhatsApp Group
+                Grupo de WhatsApp
               </a>
             )}
             
@@ -65,9 +65,9 @@ export default function Ministries() {
         {ministries?.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center p-12 border-2 border-dashed border-border rounded-2xl bg-secondary/20">
             <Building className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No Ministries Yet</h3>
-            <p className="text-muted-foreground mb-4">Add your first ministry to get started.</p>
-            <Button onClick={() => setIsOpen(true)}>Create Ministry</Button>
+            <h3 className="text-lg font-medium">No hay ministerios aún</h3>
+            <p className="text-muted-foreground mb-4">Agrega tu primer ministerio para comenzar.</p>
+            <Button onClick={() => setIsOpen(true)}>Crear Ministerio</Button>
           </div>
         )}
       </div>
@@ -90,7 +90,7 @@ function CreateMinistryDialog({ open, onOpenChange }: { open: boolean, onOpenCha
   const onSubmit = (data: z.infer<typeof insertMinistrySchema>) => {
     createMutation.mutate(data, {
       onSuccess: () => {
-        toast({ title: "Success", description: "Ministry created successfully" });
+        toast({ title: "Éxito", description: "Ministerio creado correctamente" });
         onOpenChange(false);
         form.reset();
       },
@@ -105,26 +105,26 @@ function CreateMinistryDialog({ open, onOpenChange }: { open: boolean, onOpenCha
       <DialogTrigger asChild>
         <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40">
           <Plus className="w-4 h-4" />
-          Add Ministry
+          Agregar Ministerio
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Ministry</DialogTitle>
+          <DialogTitle>Agregar Nuevo Ministerio</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Ministry Name</Label>
-            <Input id="name" {...form.register("name")} placeholder="e.g. Horeb" />
+            <Label htmlFor="name">Nombre del Ministerio</Label>
+            <Input id="name" {...form.register("name")} placeholder="ej. Horeb" />
             {form.formState.errors.name && <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="whatsapp">WhatsApp Link (Optional)</Label>
+            <Label htmlFor="whatsapp">Link de WhatsApp (Opcional)</Label>
             <Input id="whatsapp" {...form.register("whatsapp_link")} placeholder="https://chat.whatsapp.com/..." />
           </div>
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Create Ministry"}
+              {createMutation.isPending ? "Creando..." : "Crear Ministerio"}
             </Button>
           </div>
         </form>

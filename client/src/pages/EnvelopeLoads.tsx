@@ -13,8 +13,8 @@ export default function EnvelopeLoads() {
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="Envelope Loads" 
-        description='Tracking submissions for "Carga de Espiga".' 
+        title="Carga de Sobres" 
+        description='Registro de envíos para "Carga de Espiga".' 
       />
 
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
@@ -22,18 +22,18 @@ export default function EnvelopeLoads() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border/50 bg-secondary/20">
-                <th className="p-4 font-semibold text-foreground">Date</th>
-                <th className="p-4 font-semibold text-foreground">Member</th>
-                <th className="p-4 font-semibold text-foreground">Ministry</th>
-                <th className="p-4 font-semibold text-foreground">Leader/Mentor</th>
-                <th className="p-4 font-semibold text-foreground">Details</th>
+                <th className="p-4 font-semibold text-foreground">Fecha</th>
+                <th className="p-4 font-semibold text-foreground">Miembro</th>
+                <th className="p-4 font-semibold text-foreground">Ministerio</th>
+                <th className="p-4 font-semibold text-foreground">Líder/Mentor</th>
+                <th className="p-4 font-semibold text-foreground">Ofrenda</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {envelopes?.map((env) => (
                 <tr key={env.id} className="hover:bg-secondary/30 transition-colors">
                   <td className="p-4 whitespace-nowrap text-muted-foreground">
-                    {env.created_at ? format(new Date(env.created_at), 'MMM d, yyyy') : '-'}
+                    {env.created_at ? format(new Date(env.created_at), 'd MMM, yyyy') : '-'}
                   </td>
                   <td className="p-4 font-medium text-foreground">{env.user_name}</td>
                   <td className="p-4">
@@ -47,15 +47,15 @@ export default function EnvelopeLoads() {
                       {env.mentor_name && <span className="text-muted-foreground">Mentor: {env.mentor_name}</span>}
                     </div>
                   </td>
-                  <td className="p-4 max-w-xs truncate text-muted-foreground" title={env.details || ""}>
-                    {env.details || "-"}
+                  <td className="p-4 font-bold text-foreground">
+                    ${env.offering || "0"}
                   </td>
                 </tr>
               ))}
               {envelopes?.length === 0 && (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                    No envelope loads recorded yet.
+                    No se han registrado cargas de sobres aún.
                   </td>
                 </tr>
               )}

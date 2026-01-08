@@ -14,8 +14,8 @@ export default function PrayerRequests() {
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="Prayer Requests" 
-        description="View and manage prayer requests submitted by members." 
+        title="Peticiones de Oración" 
+        description="Ver y gestionar las peticiones de oración enviadas por los miembros." 
       />
 
       <div className="grid gap-4">
@@ -29,7 +29,7 @@ export default function PrayerRequests() {
                 <div className="flex items-center gap-3">
                   <h3 className="font-bold text-lg text-foreground">{req.user_name}</h3>
                   <Badge variant={req.status === 'pending' ? "secondary" : "outline"} className="capitalize">
-                    {req.status}
+                    {req.status === 'pending' ? 'Pendiente' : req.status}
                   </Badge>
                 </div>
                 <p className="text-foreground/80 leading-relaxed bg-secondary/30 p-4 rounded-lg">
@@ -39,20 +39,19 @@ export default function PrayerRequests() {
               
               <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap bg-background border border-border/50 px-3 py-1.5 rounded-full self-start">
                 <Calendar className="w-4 h-4" />
-                {req.created_at ? format(new Date(req.created_at), 'MMM d, yyyy h:mm a') : 'Unknown date'}
+                {req.created_at ? format(new Date(req.created_at), 'd MMM, yyyy h:mm a') : 'Fecha desconocida'}
               </div>
             </div>
             
             <div className="mt-4 pt-4 border-t border-border/50 flex justify-between items-center">
               <span className="text-xs text-muted-foreground font-mono">Telegram ID: {req.telegram_id}</span>
-              {/* Future: Add button to mark as reviewed */}
             </div>
           </div>
         ))}
 
         {requests?.length === 0 && (
           <div className="text-center py-12 bg-card rounded-2xl border border-dashed border-border">
-            <p className="text-muted-foreground">No prayer requests received yet.</p>
+            <p className="text-muted-foreground">No se han recibido peticiones de oración aún.</p>
           </div>
         )}
       </div>
