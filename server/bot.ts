@@ -1,10 +1,33 @@
 
 import TelegramBot from "node-telegram-bot-api";
 import { storage } from "./storage";
+import nodemailer from "nodemailer";
 
 const token = process.env.TELEGRAM_TOKEN || "8557005763:AAFs3AvvarCmiDYHxBAkQZuKcOUOBOmDVis";
 
 let bot: TelegramBot;
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'cris.ahu777@gmail.com',
+    pass: process.env.EMAIL_PASSWORD || 'your-app-password'
+  }
+});
+
+async function sendNotificationEmail(subject: string, text: string) {
+  try {
+    await transporter.sendMail({
+      from: 'cris.ahu777@gmail.com',
+      to: 'cris.ahu777@gmail.com',
+      subject: subject,
+      text: text,
+    });
+    console.log("Email sent successfully:", subject);
+  } catch (error) {
+    console.error("Error sending email:", error);
+  }
+}
 
 const MINISTRIES_LIST = [
   "MINIST JOVENES",
@@ -166,6 +189,10 @@ export function startBot() {
             content: text
         });
         await storage.updateBotUserStep(telegramId, null);
+        await sendNotificationEmail(
+          `Nueva Petición de Oración - ${getUserName(msg)}`,
+          `Petición: ${text}`
+        );
         await bot.sendMessage(chatId, "🙏 Gracias por compartir tu petición.\nVamos a estar orando por vos 🤍", { reply_markup: mainKeyboard() });
     }
 
@@ -177,6 +204,10 @@ export function startBot() {
             details: text
         });
         await storage.updateBotUserStep(telegramId, null);
+        await sendNotificationEmail(
+          `Nueva Persona Registrada - ${getUserName(msg)}`,
+          `Detalles: ${text}`
+        );
         await bot.sendMessage(chatId, "✅ Persona nueva registrada correctamente.", { reply_markup: mainKeyboard() });
     }
   });
