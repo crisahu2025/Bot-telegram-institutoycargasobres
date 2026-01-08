@@ -24,7 +24,6 @@ export const prayer_requests = pgTable("prayer_requests", {
   telegram_id: text("telegram_id").notNull(),
   user_name: text("user_name").notNull(),
   content: text("content").notNull(),
-  status: text("status").default("pending"),
   created_at: timestamp("created_at").defaultNow(),
 });
 
@@ -32,56 +31,27 @@ export const prayer_requests = pgTable("prayer_requests", {
 export const ministries = pgTable("ministries", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
-  whatsapp_link: text("whatsapp_link"),
 });
 
-// Leaders
+// Leaders (Authorized leaders for envelope loading)
 export const leaders = pgTable("leaders", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   ministry_id: integer("ministry_id").references(() => ministries.id),
-  active: boolean("active").default(true),
 });
 
-// Envelope Loads (Carga de Sobres de Espiga)
-// Fields based on Google Sheet structure: 
-// Ministerio, Mentor, Lider que Carga, Lider que Recibe, Ofrenda, Diezmo, Especial, Foto, Fecha, Usuario
+// Envelope Loads (Carga de Sobres)
 export const envelope_loads = pgTable("envelope_loads", {
   id: serial("id").primaryKey(),
   telegram_id: text("telegram_id").notNull(),
   user_name: text("user_name").notNull(),
   ministry_name: text("ministry_name"),
   mentor_name: text("mentor_name"),
-  leader_charging: text("leader_charging"),
-  leader_receiving: text("leader_receiving"),
+  leader_name: text("leader_name"), // Column H match
+  people_count: text("people_count"),
+  is_new_person: text("is_new_person"),
   offering: text("offering"),
-  tithe: text("tithe"),
-  special: text("special"),
   photo_url: text("photo_url"),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-// Institute Enrollment (INSCRIPCIONES)
-export const institute_enrollments = pgTable("institute_enrollments", {
-  id: serial("id").primaryKey(),
-  full_name: text("full_name").notNull(),
-  main_year: text("main_year").notNull(),
-  subjects: text("subjects").notNull(), // Comma separated
-  paid_registration: text("paid_registration").notNull(), // SI/NO
-  photo_registration: text("photo_registration"),
-  photo_monthly: text("photo_monthly"),
-  telegram_id: text("telegram_id").notNull(),
-  user_name: text("user_name").notNull(),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-// Institute Payments (PAGOS)
-export const institute_payments = pgTable("institute_payments", {
-  id: serial("id").primaryKey(),
-  full_name: text("full_name").notNull(),
-  photo_monthly: text("photo_monthly").notNull(),
-  telegram_id: text("telegram_id").notNull(),
-  user_name: text("user_name").notNull(),
   created_at: timestamp("created_at").defaultNow(),
 });
 
@@ -91,6 +61,29 @@ export const new_people = pgTable("new_people", {
   telegram_id: text("telegram_id").notNull(),
   recorded_by: text("recorded_by").notNull(),
   details: text("details").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Institute Enrollment (STAYING FOR DASHBOARD)
+export const institute_enrollments = pgTable("institute_enrollments", {
+  id: serial("id").primaryKey(),
+  full_name: text("full_name").notNull(),
+  main_year: text("main_year").notNull(),
+  subjects: text("subjects").notNull(),
+  paid_registration: text("paid_registration").notNull(),
+  photo_registration: text("photo_registration"),
+  photo_monthly: text("photo_monthly"),
+  telegram_id: text("telegram_id").notNull(),
+  user_name: text("user_name").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const institute_payments = pgTable("institute_payments", {
+  id: serial("id").primaryKey(),
+  full_name: text("full_name").notNull(),
+  photo_monthly: text("photo_monthly").notNull(),
+  telegram_id: text("telegram_id").notNull(),
+  user_name: text("user_name").notNull(),
   created_at: timestamp("created_at").defaultNow(),
 });
 
