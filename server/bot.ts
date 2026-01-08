@@ -50,24 +50,12 @@ export function startBot() {
   console.log("Starting Telegram Bot...");
   bot = new TelegramBot(token, { polling: true });
 
-  const mainKeyboard = () => ({
+  const yearsKeyboard = {
     keyboard: [
-      [{ text: "Cargar sobre de espiga" }],
-      [{ text: "📚 Inscripción al Instituto Bíblico Horeb" }],
-      [{ text: "🙏 Enviar petición de oración" }],
-      [{ text: "NUEVOS DE ESPIGAS" }],
-      [{ text: "Terminar" }]
+      [{ text: "Primer Año" }], [{ text: "Segundo Año" }], [{ text: "Tercer Año" }],
+      [{ text: "Cuarto Año" }], [{ text: "Quinto Año" }], [{ text: "Sexto Año" }],
+      [{ text: "Séptimo Año" }], [{ text: "Octavo Año" }], [{ text: "Terminar" }]
     ],
-    resize_keyboard: true,
-  });
-
-  const cancelKeyboard = {
-    keyboard: [[{ text: "Terminar" }]],
-    resize_keyboard: true,
-  };
-
-  const siNoKeyboard = {
-    keyboard: [[{ text: "SI" }], [{ text: "NO" }], [{ text: "Terminar" }]],
     resize_keyboard: true,
   };
 
@@ -118,7 +106,18 @@ export function startBot() {
           resize_keyboard: true
         };
         await storage.updateBotUserStep(telegramId, "env_ministry");
-        await bot.sendMessage(chatId, "¿En qué ministerio estás trabajando?", { reply_markup: keyboard });
+        await bot.sendMessage(chatId, "¿En qué ministerio estás liderando?", { reply_markup: keyboard });
+      } else if (text === "📚 Inscripción al Instituto Bíblico Horeb") {
+        const keyboard = {
+          keyboard: [
+            [{ text: "Inscribirse a año/materias" }],
+            [{ text: "Carga del comprobante de pago del mes" }],
+            [{ text: "Terminar" }]
+          ],
+          resize_keyboard: true
+        };
+        await storage.updateBotUserStep(telegramId, "inst_menu");
+        await bot.sendMessage(chatId, "Seleccioná una opción:", { reply_markup: keyboard });
       } else if (text === "🙏 Enviar petición de oración") {
         await storage.updateBotUserStep(telegramId, "prayer_request");
         await bot.sendMessage(chatId, "🙏 ¿Cuál es el motivo de tu petición de oración?", { reply_markup: cancelKeyboard });
@@ -134,33 +133,22 @@ export function startBot() {
       await storage.updateBotUserStep(telegramId, "env_mentor", { ministry_name: text });
       await bot.sendMessage(chatId, "¿Quién es tu mentor?", { reply_markup: cancelKeyboard });
     } else if (state === "env_mentor") {
-      await storage.updateBotUserStep(telegramId, "env_leader_validate", { mentor_name: text });
-      await bot.sendMessage(chatId, "¿Cuál es tu nombre?", { reply_markup: cancelKeyboard });
-    } else if (state === "env_leader_validate") {
-      const authorizedLeaders = await storage.getLeaders();
-      const isValid = authorizedLeaders.some(l => l.name.toLowerCase() === text.toLowerCase());
-      
-      if (!isValid) {
-        await bot.sendMessage(chatId, "No te encuentro en la lista de líderes para cargar el sobre.", { reply_markup: mainKeyboard() });
-        await storage.updateBotUserStep(telegramId, null);
-      } else {
-        await storage.updateBotUserStep(telegramId, "env_people_count", { leader_name: text });
-        await bot.sendMessage(chatId, "¿Cuántas personas hubo?", { reply_markup: cancelKeyboard });
-      }
-    } else if (state === "env_people_count") {
-      await storage.updateBotUserStep(telegramId, "env_new_person", { people_count: text });
-      await bot.sendMessage(chatId, "¿Hay alguien nuevo?", { reply_markup: siNoKeyboard });
-    } else if (state === "env_new_person") {
-      await storage.updateBotUserStep(telegramId, "env_offering", { is_new_person: text });
-      await bot.sendMessage(chatId, "Monto de la ofrenda:", { reply_markup: cancelKeyboard });
+      await storage.updateBotUserStep(telegramId, "env_attendance", { mentor_name: text });
+      await bot.sendMessage(chatId, "¿Cuántas personas asistieron a la espiga y si hubo una persona nueva? (Ej: 8 personas - Nueva: Juan Pérez)", { reply_markup: cancelKeyboard });
+    } else if (state === "env_attendance") {
+      await storage.updateBotUserStep(telegramId, "env_prayer_motive", { people_count: text });
+      await bot.sendMessage(chatId, "¿Faltó alguien a la espiga y tienen algún motivo de oración?", { reply_markup: cancelKeyboard });
+    } else if (state === "env_prayer_motive") {
+      await storage.updateBotUserStep(telegramId, "env_offering", { prayer_motive: text });
+      await bot.sendMessage(chatId, "¿Cuánto fue el monto de ofrenda? (solo números, ej: 5000)", { reply_markup: cancelKeyboard });
     } else if (state === "env_offering") {
       await storage.updateBotUserStep(telegramId, "env_photo", { offering: text });
-      await bot.sendMessage(chatId, "Por favor, subí la foto del sobre:", { reply_markup: cancelKeyboard });
+      await bot.sendMessage(chatId, "Subí la foto del sobre de espiga.", { reply_markup: cancelKeyboard });
     } else if (state === "env_photo" && msg.photo) {
       const photoId = msg.photo[msg.photo.length - 1].file_id;
       const photoUrl = await bot.getFileLink(photoId);
       await storage.updateBotUserStep(telegramId, "env_confirm", { photo_url: photoUrl });
-      await bot.sendMessage(chatId, `Confirmá si los datos son correctos:\n\nMinisterio: ${session.ministry_name}\nMentor: ${session.mentor_name}\nLíder: ${session.leader_name}\nPersonas: ${session.people_count}\nNuevo: ${session.is_new_person}\nOfrenda: ${session.offering}`, { reply_markup: siNoKeyboard });
+      await bot.sendMessage(chatId, `Confirmá si los datos son correctos:\n\nMinisterio: ${session.ministry_name}\nMentor: ${session.mentor_name}\nAsistencia: ${session.people_count}\nMotivo: ${session.prayer_motive}\nOfrenda: ${text}`, { reply_markup: siNoKeyboard });
     } else if (state === "env_confirm") {
       if (text === "SI") {
         await storage.createEnvelope({
@@ -168,17 +156,74 @@ export function startBot() {
           user_name: getUserName(msg),
           ministry_name: session.ministry_name,
           mentor_name: session.mentor_name,
-          leader_name: session.leader_name,
           people_count: session.people_count,
-          is_new_person: session.is_new_person,
           offering: session.offering,
           photo_url: session.photo_url
         });
-        await bot.sendMessage(chatId, "✅ Sobre cargado correctamente.", { reply_markup: mainKeyboard() });
+        await bot.sendMessage(chatId, "✅ Sobre de espiga cargada con éxito.\nGracias por tu fidelidad 🙏", { reply_markup: mainKeyboard() });
       } else {
         await bot.sendMessage(chatId, "Proceso cancelado.", { reply_markup: mainKeyboard() });
       }
       await storage.updateBotUserStep(telegramId, null);
+    }
+
+    // --- FLOW: INSTITUTE (INSTITUTO) ---
+    else if (state === "inst_menu") {
+      if (text === "Inscribirse a año/materias") {
+        await storage.updateBotUserStep(telegramId, "inst_name", { inst_flow: "enroll" });
+        await bot.sendMessage(chatId, "Apellido y nombre completo del alumno:", { reply_markup: cancelKeyboard });
+      } else if (text === "Carga del comprobante de pago del mes") {
+        await storage.updateBotUserStep(telegramId, "inst_pay_name", { inst_flow: "pay" });
+        await bot.sendMessage(chatId, "Apellido y nombre completo del alumno:", { reply_markup: cancelKeyboard });
+      }
+    } else if (state === "inst_name") {
+      await storage.updateBotUserStep(telegramId, "inst_year", { full_name: text });
+      await bot.sendMessage(chatId, "¿Cuál es tu año principal?", { reply_markup: yearsKeyboard });
+    } else if (state === "inst_year") {
+      await storage.updateBotUserStep(telegramId, "inst_subjects", { main_year: text });
+      await bot.sendMessage(chatId, "Escribí las materias que vas a cursar (separadas por coma):", { reply_markup: cancelKeyboard });
+    } else if (state === "inst_subjects") {
+      await storage.updateBotUserStep(telegramId, "inst_matr_q", { subjects: text });
+      await bot.sendMessage(chatId, "¿Pagaste la matrícula anual?", { reply_markup: siNoKeyboard });
+    } else if (state === "inst_matr_q") {
+      if (text === "SI") {
+        await storage.updateBotUserStep(telegramId, "inst_photo_monthly", { paid_registration: "SI" });
+        await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
+      } else {
+        await storage.updateBotUserStep(telegramId, "inst_photo_reg", { paid_registration: "NO" });
+        await bot.sendMessage(chatId, "Cargá el comprobante de la matrícula:", { reply_markup: cancelKeyboard });
+      }
+    } else if (state === "inst_photo_reg" && msg.photo) {
+      const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
+      await storage.updateBotUserStep(telegramId, "inst_photo_monthly", { photo_registration: photoUrl });
+      await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
+    } else if (state === "inst_photo_monthly" && msg.photo) {
+      const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
+      await storage.createEnrollment({
+        full_name: session.full_name,
+        main_year: session.main_year,
+        subjects: session.subjects,
+        paid_registration: session.paid_registration,
+        photo_registration: session.photo_registration || "",
+        photo_monthly: photoUrl,
+        telegram_id: telegramId,
+        user_name: getUserName(msg)
+      });
+      await storage.updateBotUserStep(telegramId, null);
+      await bot.sendMessage(chatId, "✅ Inscripción completada exitosamente.", { reply_markup: mainKeyboard() });
+    } else if (state === "inst_pay_name") {
+        await storage.updateBotUserStep(telegramId, "inst_pay_photo", { full_name: text });
+        await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
+    } else if (state === "inst_pay_photo" && msg.photo) {
+        const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
+        await storage.createPayment({
+            full_name: session.full_name,
+            photo_monthly: photoUrl,
+            telegram_id: telegramId,
+            user_name: getUserName(msg)
+        });
+        await storage.updateBotUserStep(telegramId, null);
+        await bot.sendMessage(chatId, "✅ Comprobante de pago guardado correctamente.", { reply_markup: mainKeyboard() });
     }
 
     // --- FLOW: PRAYER ---
