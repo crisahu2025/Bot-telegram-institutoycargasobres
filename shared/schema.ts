@@ -113,3 +113,12 @@ export type EnvelopeLoad = typeof envelope_loads.$inferSelect;
 export type InstituteEnrollment = typeof institute_enrollments.$inferSelect;
 export type InstitutePayment = typeof institute_payments.$inferSelect;
 export type NewPerson = typeof new_people.$inferSelect;
+
+export type InsertBotUser = z.infer<typeof insertBotUserSchema>;
+export type InsertPrayerRequest = z.infer<typeof insertPrayerRequestSchema>;
+export type InsertMinistry = z.infer<typeof insertMinistrySchema>;
+export type InsertLeader = z.infer<typeof insertLeaderSchema>;
+export type InsertEnvelopeLoad = z.infer<typeof insertEnvelopeLoadSchema>;
+export type InsertInstituteEnrollment = z.infer<typeof insertInstituteEnrollmentSchema>;
+export type InsertInstitutePayment = z.infer<typeof insertInstitutePaymentSchema>;
+export type InsertNewPeople = z.infer<typeof insertNewPeopleSchema>;

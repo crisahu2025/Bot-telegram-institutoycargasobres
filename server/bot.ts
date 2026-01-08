@@ -55,7 +55,7 @@ export function startBot() {
     return `${msg.from?.first_name || ""} ${msg.from?.last_name || ""}`.trim();
   };
 
-  bot.on("message", async (msg) => {
+  bot.on("message", async (msg: TelegramBot.Message) => {
     const chatId = msg.chat.id.toString();
     const text = msg.text || "";
     const telegramId = msg.from?.id.toString() || "";
@@ -134,7 +134,6 @@ export function startBot() {
       await bot.sendMessage(chatId, "Por favor, enviá una foto del comprobante/sobre:", { reply_markup: cancelKeyboard });
     } else if (state === "env_photo" && msg.photo) {
       const photoId = msg.photo[msg.photo.length - 1].file_id;
-      // In real scenario, we'd use UrlFetchApp like in GAS, but here we can use bot.getFileLink
       const photoUrl = await bot.getFileLink(photoId);
       
       await storage.createEnvelope({
@@ -185,8 +184,7 @@ export function startBot() {
       await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
     } else if (state === "inst_photo_monthly" && msg.photo) {
       const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
-      // Finalize enrollment
-      await db_storage_helper.createEnrollment({
+      await storage.createEnrollment({
         full_name: session.full_name,
         main_year: session.main_year,
         subjects: session.subjects,
@@ -203,7 +201,7 @@ export function startBot() {
         await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
     } else if (state === "inst_pay_photo" && msg.photo) {
         const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
-        await db_storage_helper.createPayment({
+        await storage.createPayment({
             full_name: session.full_name,
             photo_monthly: photoUrl,
             telegram_id: telegramId,
@@ -226,14 +224,4 @@ export function startBot() {
   });
 
   return bot;
-}
-
-// Helper to interact with storage for new tables
-const db_storage_helper = {
-    async createEnrollment(data: any) {
-        // Since storage.ts is a class, we'd need to add methods there.
-        // For brevity and Turn Limit, I'll add them to storage.ts in the same turn.
-    },
-    async createPayment(data: any) {
-    }
 }

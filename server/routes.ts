@@ -6,21 +6,6 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { startBot } from "./bot";
 
-async function seedDatabase() {
-  const existing = await storage.getMinistries();
-  if (existing.length === 0) {
-    console.log("Seeding database...");
-    const m1 = await storage.createMinistry({ name: "Horeb", whatsapp_link: "https://wa.me/123456789" });
-    const m2 = await storage.createMinistry({ name: "Espigas", whatsapp_link: "https://wa.me/987654321" });
-    const m3 = await storage.createMinistry({ name: "Alabanza" });
-
-    await storage.createLeader({ name: "Juan Perez", ministry_id: m1.id, active: true });
-    await storage.createLeader({ name: "Maria Gomez", ministry_id: m2.id, active: true });
-    await storage.createLeader({ name: "Carlos Lopez", ministry_id: m3.id, active: true });
-    console.log("Database seeded!");
-  }
-}
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -28,8 +13,6 @@ export async function registerRoutes(
   
   // Start the bot
   try {
-      // Seed first
-      await seedDatabase();
       startBot();
   } catch (e) {
       console.error("Failed to start bot:", e);
@@ -78,8 +61,13 @@ export async function registerRoutes(
 
   // Envelopes
   app.get(api.envelopes.list.path, async (req, res) => {
-    const envelopes = await storage.getEnvelopes();
-    res.json(envelopes);
+    try {
+      const envelopes = await storage.getEnvelopes();
+      res.json(envelopes);
+    } catch (e) {
+      console.error("Error fetching envelopes:", e);
+      res.status(500).json({ message: "Error fetching envelopes" });
+    }
   });
 
   // New People
