@@ -44,6 +44,17 @@ const MINISTRIES_LIST = [
   "MINIST DE PROTOCOLO"
 ];
 
+const HOREB_SUBJECTS: Record<string, string[]> = {
+  "Primer Año": ["Epístolas Pastorales", "Evangelismo", "Introducción Bíblica - VIRTUAL", "Pentateuco I", "Evangelios Sinópticos I", "Dios – Jesucristo (T.S.I)"],
+  "Segundo Año": ["Epístolas Generales - VIRTUAL", "Evangelios Sinópticos II", "Hogar Cristiano I", "Plantación de Iglesias I", "Pecado – Salvación (T.S.II)", "Pentateuco II"],
+  "Tercer Año": ["Ángeles - Hombre – Biblia (T.S.III)", "Hechos", "Libros Históricos I", "Misiones I", "Teología Práctica I", "Escuela Bíblica - VIRTUAL", "Historia Eclesiástica I - VIRTUAL"],
+  "Cuarto Año": ["Religiones Comparadas - VIRTUAL", "Pneumatología (T.S.IV)", "Dones y Ministerios", "Historia de los tiempos bíblicos", "Hermenéutica I", "Liderazgo", "Evangelio de Juan", "Homilética I - VIRTUAL"],
+  "Quinto Año": ["Hogar Cristiano II", "Teología Práctica II", "Evidencias Cristianas", "Didáctica", "Epístolas Paulinas I", "Libros Poéticos I"],
+  "Sexto Año": ["Pedagogía", "Romanos", "Libros Históricos II", "Profetas Mayores I", "Ética Cristiana", "Homilética II"],
+  "Séptimo Año": ["Hebreos", "Teología Práctica III", "Plantación de Iglesias II", "Profetas Menores", "Libros Poéticos II", "Historia Eclesiástica II"],
+  "Octavo Año": ["Misiones II", "Epístolas Paulinas II", "Teología Contemporánea", "Escatología – Eclesiología (T.S.V)", "Profetas Mayores II", "Daniel y Apocalipsis", "Hermenéutica II", "Introducción al Griego"]
+};
+
 export function startBot() {
   if (bot) return bot;
 
@@ -136,14 +147,15 @@ export function startBot() {
       } else if (text === "📚 Inscripción al Instituto Bíblico Horeb") {
         const keyboard = {
           keyboard: [
-            [{ text: "Inscribirse a año/materias" }],
+            [{ text: "Inscribirme al año completo" }],
+            [{ text: "Añadir materias específicas" }],
             [{ text: "Carga del comprobante de pago del mes" }],
             [{ text: "Terminar" }]
           ],
           resize_keyboard: true
         };
         await storage.updateBotUserStep(telegramId, "inst_menu");
-        await bot.sendMessage(chatId, "Seleccioná una opción:", { reply_markup: keyboard });
+        await bot.sendMessage(chatId, "Seleccioná una opción del Instituto Horeb:", { reply_markup: keyboard });
       } else if (text === "🙏 Enviar petición de oración") {
         await storage.updateBotUserStep(telegramId, "prayer_request");
         await bot.sendMessage(chatId, "🙏 ¿Cuál es el motivo de tu petición de oración?", { reply_markup: cancelKeyboard });
@@ -195,20 +207,34 @@ export function startBot() {
 
     // --- FLOW: INSTITUTE (INSTITUTO) ---
     else if (state === "inst_menu") {
-      if (text === "Inscribirse a año/materias") {
-        await storage.updateBotUserStep(telegramId, "inst_name", { inst_flow: "enroll" });
+      if (text === "Inscribirme al año completo") {
+        await storage.updateBotUserStep(telegramId, "inst_name", { inst_flow: "full_year" });
         await bot.sendMessage(chatId, "Apellido y nombre completo del alumno:", { reply_markup: cancelKeyboard });
+      } else if (text === "Añadir materias específicas") {
+        await storage.updateBotUserStep(telegramId, "inst_name", { inst_flow: "subjects" });
+        await bot.sendMessage(chatId, "Apellido y nombre completo del alumno (exacto al que te inscribiste):", { reply_markup: cancelKeyboard });
       } else if (text === "Carga del comprobante de pago del mes") {
         await storage.updateBotUserStep(telegramId, "inst_pay_name", { inst_flow: "pay" });
         await bot.sendMessage(chatId, "Apellido y nombre completo del alumno:", { reply_markup: cancelKeyboard });
       }
     } else if (state === "inst_name") {
-      await storage.updateBotUserStep(telegramId, "inst_year", { full_name: text });
-      await bot.sendMessage(chatId, "¿Cuál es tu año principal?", { reply_markup: yearsKeyboard });
-    } else if (state === "inst_year") {
-      await storage.updateBotUserStep(telegramId, "inst_subjects", { main_year: text });
-      await bot.sendMessage(chatId, "Escribí las materias que vas a cursar (separadas por coma):", { reply_markup: cancelKeyboard });
-    } else if (state === "inst_subjects") {
+      await storage.updateBotUserStep(telegramId, "inst_year_select", { full_name: text });
+      await bot.sendMessage(chatId, "¿De qué año vas a elegir?", { reply_markup: yearsKeyboard });
+    } else if (state === "inst_year_select") {
+      if (session.inst_flow === "full_year") {
+        const yearSubjects = HOREB_SUBJECTS[text] || [];
+        await storage.updateBotUserStep(telegramId, "inst_matr_q", { main_year: text, subjects: yearSubjects.join(", ") });
+        await bot.sendMessage(chatId, `Se añadirán todas las materias de ${text}. ¿Pagaste la matrícula anual?`, { reply_markup: siNoKeyboard });
+      } else {
+        const yearSubjects = HOREB_SUBJECTS[text] || [];
+        const keyboard = {
+          keyboard: [...yearSubjects.map(s => [{ text: s }]), [{ text: "Terminar" }]],
+          resize_keyboard: true
+        };
+        await storage.updateBotUserStep(telegramId, "inst_subjects_pick", { main_year: text });
+        await bot.sendMessage(chatId, "Seleccioná la materia:", { reply_markup: keyboard });
+      }
+    } else if (state === "inst_subjects_pick") {
       await storage.updateBotUserStep(telegramId, "inst_matr_q", { subjects: text });
       await bot.sendMessage(chatId, "¿Pagaste la matrícula anual?", { reply_markup: siNoKeyboard });
     } else if (state === "inst_matr_q") {
@@ -236,7 +262,7 @@ export function startBot() {
         user_name: getUserName(msg)
       });
       await storage.updateBotUserStep(telegramId, null);
-      await bot.sendMessage(chatId, "✅ Inscripción completada exitosamente.", { reply_markup: mainKeyboard() });
+      await bot.sendMessage(chatId, "✅ Proceso completado exitosamente.", { reply_markup: mainKeyboard() });
     } else if (state === "inst_pay_name") {
         await storage.updateBotUserStep(telegramId, "inst_pay_photo", { full_name: text });
         await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
