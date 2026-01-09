@@ -30,6 +30,25 @@ export function useCreateMinistry() {
   });
 }
 
+export function useDeleteMinistry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, password }: { id: number; password: string }) => {
+      const res = await fetch(buildUrl(api.ministries.delete.path, { id }), {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to delete ministry");
+      }
+      return await res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.ministries.list.path] }),
+  });
+}
+
 // === LEADERS ===
 export function useLeaders(ministryId?: number) {
   return useQuery({

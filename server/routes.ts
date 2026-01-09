@@ -38,6 +38,22 @@ export async function registerRoutes(
     }
   });
 
+  app.delete(api.ministries.delete.path, async (req, res) => {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (password !== "Esteban2025") {
+      return res.status(401).json({ message: "Contraseña incorrecta" });
+    }
+
+    try {
+      await storage.deleteMinistry(Number(id));
+      res.json({ message: "Ministerio eliminado correctamente" });
+    } catch (e) {
+      res.status(404).json({ message: "Ministerio no encontrado" });
+    }
+  });
+
   // Leaders
   app.get(api.leaders.list.path, async (req, res) => {
     const ministryId = req.query.ministry_id ? Number(req.query.ministry_id) : undefined;

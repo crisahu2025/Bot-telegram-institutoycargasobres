@@ -19,6 +19,16 @@ export const api = {
         201: z.custom<typeof ministries.$inferSelect>(),
       },
     },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/ministries/:id',
+      input: z.object({ password: z.string() }),
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: z.object({ message: z.string() }),
+        404: z.object({ message: z.string() }),
+      },
+    },
     get: {
       method: 'GET' as const,
       path: '/api/ministries/:id',

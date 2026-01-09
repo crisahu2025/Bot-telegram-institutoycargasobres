@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useMinistries, useCreateMinistry, useEnvelopeLoads } from "@/hooks/use-dashboard";
+import { useMinistries, useCreateMinistry, useEnvelopeLoads, useDeleteMinistry } from "@/hooks/use-dashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Building, MessageCircle, FileText, Eye } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Loader2, Building, MessageCircle, FileText, Eye, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -19,10 +19,28 @@ export default function Ministries() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMinistry, setSelectedMinistry] = useState<string | null>(null);
   const [selectedEnvelope, setSelectedEnvelope] = useState<EnvelopeLoad | null>(null);
+  const [ministryToDelete, setMinistryToDelete] = useState<number | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const { toast } = useToast();
+  const deleteMutation = useDeleteMinistry();
   
   if (isLoading) {
     return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>;
   }
+
+  const handleDelete = () => {
+    if (!ministryToDelete) return;
+    deleteMutation.mutate({ id: ministryToDelete, password: deletePassword }, {
+      onSuccess: () => {
+        toast({ title: "Éxito", description: "Ministerio eliminado correctamente" });
+        setMinistryToDelete(null);
+        setDeletePassword("");
+      },
+      onError: (error) => {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+    });
+  };
 
   const filteredEnvelopes = selectedMinistry 
     ? envelopes?.filter(e => e.ministry_name === selectedMinistry) || []
@@ -49,16 +67,29 @@ export default function Ministries() {
             return (
               <div 
                 key={ministry.id} 
-                className="group bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer"
+                className="group bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer relative"
                 onClick={() => setSelectedMinistry(ministry.name)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                     <Building className="w-6 h-6" />
                   </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary text-xs font-semibold">
-                    <FileText className="w-3.5 h-3.5" />
-                    {ministryEnvelopes.length} Sobres
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary text-xs font-semibold">
+                      <FileText className="w-3.5 h-3.5" />
+                      {ministryEnvelopes.length}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMinistryToDelete(ministry.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
                 
@@ -174,6 +205,36 @@ export default function Ministries() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={ministryToDelete !== null} onOpenChange={(open) => !open && setMinistryToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Eliminación</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Esta acción no se puede deshacer. Por favor ingresa la contraseña de administrador para continuar.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                value={deletePassword} 
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Ingresa la contraseña"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMinistryToDelete(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar Ministerio"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

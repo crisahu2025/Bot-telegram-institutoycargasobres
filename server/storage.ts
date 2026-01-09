@@ -34,6 +34,7 @@ export interface IStorage {
 
   createEnrollment(enrollment: InsertInstituteEnrollment): Promise<InstituteEnrollment>;
   createPayment(payment: InsertInstitutePayment): Promise<InstitutePayment>;
+  deleteMinistry(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -49,6 +50,9 @@ export class DatabaseStorage implements IStorage {
   async createMinistry(ministry: InsertMinistry): Promise<Ministry> {
     const [m] = await db.insert(ministries).values(ministry).returning();
     return m;
+  }
+  async deleteMinistry(id: number): Promise<void> {
+    await db.delete(ministries).where(eq(ministries.id, id));
   }
 
   async getLeaders(ministryId?: number): Promise<Leader[]> {
