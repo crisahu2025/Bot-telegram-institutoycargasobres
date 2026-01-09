@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useMinistries, useCreateMinistry } from "@/hooks/use-dashboard";
+import { useMinistries, useCreateMinistry, useEnvelopeLoads } from "@/hooks/use-dashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Building, MessageCircle } from "lucide-react";
+import { Plus, Loader2, Building, MessageCircle, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { insertMinistrySchema } from "@shared/schema";
 
 export default function Ministries() {
   const { data: ministries, isLoading } = useMinistries();
+  const { data: envelopes } = useEnvelopeLoads();
   const [isOpen, setIsOpen] = useState(false);
   
   if (isLoading) {
@@ -24,42 +25,64 @@ export default function Ministries() {
     <div className="space-y-8">
       <PageHeader 
         title="Ministerios" 
-        description="Administra los diferentes ministerios de la iglesia."
+        description="Administra los diferentes ministerios y visualiza sus cargas de sobres."
       >
         <CreateMinistryDialog open={isOpen} onOpenChange={setIsOpen} />
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {ministries?.map((ministry) => (
-          <div 
-            key={ministry.id} 
-            className="group bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                <Building className="w-6 h-6" />
+        {ministries?.map((ministry) => {
+          const ministryEnvelopes = envelopes?.filter(e => e.ministry_name === ministry.name) || [];
+          
+          return (
+            <div 
+              key={ministry.id} 
+              className="group bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <Building className="w-6 h-6" />
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary text-xs font-semibold">
+                  <FileText className="w-3.5 h-3.5" />
+                  {ministryEnvelopes.length} Sobres
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-bold mb-2">{ministry.name}</h3>
+              
+              <div className="space-y-3 mt-4">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Últimas Cargas</h4>
+                {ministryEnvelopes.length > 0 ? (
+                  <div className="space-y-2">
+                    {ministryEnvelopes.slice(0, 3).map(env => (
+                      <div key={env.id} className="text-xs flex justify-between items-center bg-secondary/30 p-2 rounded-lg">
+                        <span className="font-medium truncate max-w-[120px]">{env.user_name}</span>
+                        <span className="font-bold text-primary">${env.offering}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Sin cargas registradas aún.</p>
+                )}
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-border/50 flex justify-between items-center">
+                <span className="text-xs text-muted-foreground font-mono">ID: {ministry.id}</span>
+                {ministry.whatsapp_link && (
+                  <a 
+                    href={ministry.whatsapp_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 hover:text-emerald-700 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </a>
+                )}
               </div>
             </div>
-            
-            <h3 className="text-xl font-bold mb-2">{ministry.name}</h3>
-            
-            {ministry.whatsapp_link && (
-              <a 
-                href={ministry.whatsapp_link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-green-600 transition-colors mt-2"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Grupo de WhatsApp
-              </a>
-            )}
-            
-            <div className="mt-6 pt-4 border-t border-border/50 flex justify-end">
-              <span className="text-xs text-muted-foreground font-mono">ID: {ministry.id}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Empty State */}
         {ministries?.length === 0 && (

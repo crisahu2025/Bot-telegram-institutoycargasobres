@@ -5,6 +5,8 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { startBot } from "./bot";
+import { db } from "./db";
+import { institute_enrollments, institute_payments } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -68,6 +70,17 @@ export async function registerRoutes(
       console.error("Error fetching envelopes:", e);
       res.status(500).json({ message: "Error fetching envelopes" });
     }
+  });
+
+  // Institute
+  app.get(api.institute.enrollments.path, async (req, res) => {
+    const enrollments = await db.select().from(institute_enrollments);
+    res.json(enrollments);
+  });
+
+  app.get(api.institute.payments.path, async (req, res) => {
+    const payments = await db.select().from(institute_payments);
+    res.json(payments);
   });
 
   // New People

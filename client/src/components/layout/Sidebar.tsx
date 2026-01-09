@@ -5,9 +5,9 @@ import {
   Users, 
   HeartHandshake, 
   Church, 
-  Mail, 
   UserPlus,
-  Menu
+  Menu,
+  GraduationCap
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -15,10 +15,10 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/", label: "Panel Control", icon: LayoutDashboard },
+  { href: "/institute", label: "Instituto Horeb", icon: GraduationCap },
   { href: "/ministries", label: "Ministerios", icon: Church },
   { href: "/leaders", label: "Líderes", icon: Users },
   { href: "/requests", label: "Peticiones de Oración", icon: HeartHandshake },
-  { href: "/envelopes", label: "Carga de Sobres", icon: Mail },
   { href: "/new-people", label: "Personas Nuevas", icon: UserPlus },
 ];
 

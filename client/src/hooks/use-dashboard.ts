@@ -85,6 +85,29 @@ export function useEnvelopeLoads() {
   });
 }
 
+// === INSTITUTE ===
+export function useInstituteEnrollments() {
+  return useQuery({
+    queryKey: [api.institute.enrollments.path],
+    queryFn: async () => {
+      const res = await fetch(api.institute.enrollments.path);
+      if (!res.ok) throw new Error("Failed to fetch enrollments");
+      return await res.json() as typeof import("@shared/schema").institute_enrollments.$inferSelect[];
+    },
+  });
+}
+
+export function useInstitutePayments() {
+  return useQuery({
+    queryKey: [api.institute.payments.path],
+    queryFn: async () => {
+      const res = await fetch(api.institute.payments.path);
+      if (!res.ok) throw new Error("Failed to fetch payments");
+      return await res.json() as typeof import("@shared/schema").institute_payments.$inferSelect[];
+    },
+  });
+}
+
 // === NEW PEOPLE ===
 export function useNewPeople() {
   return useQuery({

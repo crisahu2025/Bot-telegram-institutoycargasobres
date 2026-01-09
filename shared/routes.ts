@@ -64,6 +64,22 @@ export const api = {
       },
     },
   },
+  institute: {
+    enrollments: {
+      method: 'GET' as const,
+      path: '/api/institute/enrollments',
+      responses: {
+        200: z.array(z.custom<typeof institute_enrollments.$inferSelect>()),
+      },
+    },
+    payments: {
+      method: 'GET' as const,
+      path: '/api/institute/payments',
+      responses: {
+        200: z.array(z.custom<typeof institute_payments.$inferSelect>()),
+      },
+    },
+  },
   newPeople: {
     list: {
       method: 'GET' as const,

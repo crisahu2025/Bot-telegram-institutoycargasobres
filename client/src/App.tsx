@@ -13,6 +13,7 @@ import Leaders from "@/pages/Leaders";
 import PrayerRequests from "@/pages/PrayerRequests";
 import EnvelopeLoads from "@/pages/EnvelopeLoads";
 import NewPeople from "@/pages/NewPeople";
+import HorebInstitute from "@/pages/HorebInstitute";
 
 function Router() {
   return (
@@ -22,10 +23,10 @@ function Router() {
         <div className="container mx-auto p-4 md:p-8 max-w-7xl animate-in fade-in duration-500">
           <Switch>
             <Route path="/" component={Dashboard} />
+            <Route path="/institute" component={HorebInstitute} />
             <Route path="/ministries" component={Ministries} />
             <Route path="/leaders" component={Leaders} />
             <Route path="/requests" component={PrayerRequests} />
-            <Route path="/envelopes" component={EnvelopeLoads} />
             <Route path="/new-people" component={NewPeople} />
             <Route component={NotFound} />
           </Switch>
