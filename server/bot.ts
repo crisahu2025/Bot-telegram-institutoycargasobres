@@ -50,6 +50,27 @@ export function startBot() {
   console.log("Starting Telegram Bot...");
   bot = new TelegramBot(token, { polling: true });
 
+  const mainKeyboard = () => ({
+    keyboard: [
+      [{ text: "Cargar sobre de espiga" }],
+      [{ text: "📚 Inscripción al Instituto Bíblico Horeb" }],
+      [{ text: "🙏 Enviar petición de oración" }],
+      [{ text: "NUEVOS DE ESPIGAS" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true,
+  });
+
+  const cancelKeyboard = {
+    keyboard: [[{ text: "Terminar" }]],
+    resize_keyboard: true,
+  };
+
+  const siNoKeyboard = {
+    keyboard: [[{ text: "SI" }], [{ text: "NO" }], [{ text: "Terminar" }]],
+    resize_keyboard: true,
+  };
+
   const yearsKeyboard = {
     keyboard: [
       [{ text: "Primer Año" }], [{ text: "Segundo Año" }], [{ text: "Tercer Año" }],
@@ -72,12 +93,17 @@ export function startBot() {
 
     let user = await storage.getBotUser(telegramId);
     if (!user) {
-      user = await storage.createBotUser({
-        telegram_id: telegramId,
-        first_name: msg.from?.first_name,
-        last_name: msg.from?.last_name,
-        username: msg.from?.username,
-      });
+      try {
+        user = await storage.createBotUser({
+          telegram_id: telegramId,
+          first_name: msg.from?.first_name,
+          last_name: msg.from?.last_name,
+          username: msg.from?.username,
+        });
+      } catch (e) {
+        user = await storage.getBotUser(telegramId);
+        if (!user) throw e;
+      }
     }
 
     if (text === "/start" || text === "Hola") {
@@ -148,7 +174,7 @@ export function startBot() {
       const photoId = msg.photo[msg.photo.length - 1].file_id;
       const photoUrl = await bot.getFileLink(photoId);
       await storage.updateBotUserStep(telegramId, "env_confirm", { photo_url: photoUrl });
-      await bot.sendMessage(chatId, `Confirmá si los datos son correctos:\n\nMinisterio: ${session.ministry_name}\nMentor: ${session.mentor_name}\nAsistencia: ${session.people_count}\nMotivo: ${session.prayer_motive}\nOfrenda: ${text}`, { reply_markup: siNoKeyboard });
+      await bot.sendMessage(chatId, `Confirmá si los datos son correctos:\n\nMinisterio: ${session.ministry_name}\nMentor: ${session.mentor_name}\nAsistencia: ${session.people_count}\nMotivo: ${session.prayer_motive}\nOfrenda: ${session.offering}`, { reply_markup: siNoKeyboard });
     } else if (state === "env_confirm") {
       if (text === "SI") {
         await storage.createEnvelope({
