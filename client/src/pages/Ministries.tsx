@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMinistries, useCreateMinistry, useEnvelopeLoads } from "@/hooks/use-dashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Building, MessageCircle, FileText } from "lucide-react";
+import { Plus, Loader2, Building, MessageCircle, FileText, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,90 +10,172 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { insertMinistrySchema } from "@shared/schema";
+import { insertMinistrySchema, type EnvelopeLoad } from "@shared/schema";
+import { format } from "date-fns";
 
 export default function Ministries() {
   const { data: ministries, isLoading } = useMinistries();
   const { data: envelopes } = useEnvelopeLoads();
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedMinistry, setSelectedMinistry] = useState<string | null>(null);
+  const [selectedEnvelope, setSelectedEnvelope] = useState<EnvelopeLoad | null>(null);
   
   if (isLoading) {
     return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>;
   }
 
+  const filteredEnvelopes = selectedMinistry 
+    ? envelopes?.filter(e => e.ministry_name === selectedMinistry) || []
+    : [];
+
   return (
     <div className="space-y-8">
       <PageHeader 
-        title="Ministerios" 
-        description="Administra los diferentes ministerios y visualiza sus cargas de sobres."
+        title={selectedMinistry ? `Sobres: ${selectedMinistry}` : "Ministerios"} 
+        description={selectedMinistry ? "Detalle de cargas de sobres para este ministerio." : "Administra los diferentes ministerios y visualiza sus cargas de sobres."}
       >
-        <CreateMinistryDialog open={isOpen} onOpenChange={setIsOpen} />
+        {selectedMinistry ? (
+          <Button variant="outline" onClick={() => setSelectedMinistry(null)}>Volver a Ministerios</Button>
+        ) : (
+          <CreateMinistryDialog open={isOpen} onOpenChange={setIsOpen} />
+        )}
       </PageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {ministries?.map((ministry) => {
-          const ministryEnvelopes = envelopes?.filter(e => e.ministry_name === ministry.name) || [];
-          
-          return (
-            <div 
-              key={ministry.id} 
-              className="group bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                  <Building className="w-6 h-6" />
-                </div>
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary text-xs font-semibold">
-                  <FileText className="w-3.5 h-3.5" />
-                  {ministryEnvelopes.length} Sobres
-                </div>
-              </div>
-              
-              <h3 className="text-xl font-bold mb-2">{ministry.name}</h3>
-              
-              <div className="space-y-3 mt-4">
-                <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Últimas Cargas</h4>
-                {ministryEnvelopes.length > 0 ? (
-                  <div className="space-y-2">
-                    {ministryEnvelopes.slice(0, 3).map(env => (
-                      <div key={env.id} className="text-xs flex justify-between items-center bg-secondary/30 p-2 rounded-lg">
-                        <span className="font-medium truncate max-w-[120px]">{env.user_name}</span>
-                        <span className="font-bold text-primary">${env.offering}</span>
-                      </div>
-                    ))}
+      {!selectedMinistry ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {ministries?.map((ministry) => {
+            const ministryEnvelopes = envelopes?.filter(e => e.ministry_name === ministry.name) || [];
+            
+            return (
+              <div 
+                key={ministry.id} 
+                className="group bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer"
+                onClick={() => setSelectedMinistry(ministry.name)}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Building className="w-6 h-6" />
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">Sin cargas registradas aún.</p>
-                )}
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary text-xs font-semibold">
+                    <FileText className="w-3.5 h-3.5" />
+                    {ministryEnvelopes.length} Sobres
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold mb-2">{ministry.name}</h3>
+                
+                <div className="space-y-3 mt-4">
+                  <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Últimas Cargas</h4>
+                  {ministryEnvelopes.length > 0 ? (
+                    <div className="space-y-2">
+                      {ministryEnvelopes.slice(0, 3).map(env => (
+                        <div key={env.id} className="text-xs flex justify-between items-center bg-secondary/30 p-2 rounded-lg">
+                          <span className="font-medium truncate max-w-[120px]">{env.user_name}</span>
+                          <span className="font-bold text-primary">${env.offering}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Sin cargas registradas aún.</p>
+                  )}
+                </div>
               </div>
-              
-              <div className="mt-6 pt-4 border-t border-border/50 flex justify-between items-center">
-                <span className="text-xs text-muted-foreground font-mono">ID: {ministry.id}</span>
-                {ministry.whatsapp_link && (
-                  <a 
-                    href={ministry.whatsapp_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-emerald-600 hover:text-emerald-700 transition-colors"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                  </a>
-                )}
-              </div>
+            );
+          })}
+          
+          {ministries?.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center p-12 border-2 border-dashed border-border rounded-2xl bg-secondary/20">
+              <Building className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No hay ministerios aún</h3>
+              <p className="text-muted-foreground mb-4">Agrega tu primer ministerio para comenzar.</p>
+              <Button onClick={() => setIsOpen(true)}>Crear Ministerio</Button>
             </div>
-          );
-        })}
-
-        {/* Empty State */}
-        {ministries?.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center p-12 border-2 border-dashed border-border rounded-2xl bg-secondary/20">
-            <Building className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No hay ministerios aún</h3>
-            <p className="text-muted-foreground mb-4">Agrega tu primer ministerio para comenzar.</p>
-            <Button onClick={() => setIsOpen(true)}>Crear Ministerio</Button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border/50 bg-secondary/20">
+                  <th className="p-4 font-semibold text-foreground">Usuario</th>
+                  <th className="p-4 font-semibold text-foreground">Mentor</th>
+                  <th className="p-4 font-semibold text-foreground">Asistencia</th>
+                  <th className="p-4 font-semibold text-foreground">Monto</th>
+                  <th className="p-4 font-semibold text-foreground">Fecha</th>
+                  <th className="p-4 font-semibold text-foreground">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {filteredEnvelopes.map((env) => (
+                  <tr key={env.id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="p-4 font-medium text-foreground">{env.user_name}</td>
+                    <td className="p-4">{env.mentor_name}</td>
+                    <td className="p-4">{env.people_count}</td>
+                    <td className="p-4 font-bold text-primary">${env.offering}</td>
+                    <td className="p-4 text-muted-foreground whitespace-nowrap">
+                      {env.created_at ? format(new Date(env.created_at), 'd MMM, yyyy') : '-'}
+                    </td>
+                    <td className="p-4">
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedEnvelope(env)}>
+                        <Eye className="w-4 h-4 mr-1" /> Ver
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredEnvelopes.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">No hay sobres registrados para este ministerio.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Envelope Details Dialog */}
+      <Dialog open={!!selectedEnvelope} onOpenChange={(open) => !open && setSelectedEnvelope(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Detalle del Sobre</DialogTitle>
+          </DialogHeader>
+          {selectedEnvelope && (
+            <div className="space-y-6 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Usuario</Label>
+                  <p className="font-medium">{selectedEnvelope.user_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Ministerio</Label>
+                  <p className="font-medium">{selectedEnvelope.ministry_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Mentor</Label>
+                  <p className="font-medium">{selectedEnvelope.mentor_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Asistencia</Label>
+                  <p className="font-medium">{selectedEnvelope.people_count}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Monto Ofrenda</Label>
+                  <p className="font-bold text-primary text-lg">${selectedEnvelope.offering}</p>
+                </div>
+              </div>
+              {selectedEnvelope.photo_url && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">Foto del Sobre</Label>
+                  <div className="rounded-xl border overflow-hidden bg-secondary/20">
+                    <img src={selectedEnvelope.photo_url} alt="Sobre" className="w-full h-auto object-contain max-h-[300px]" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

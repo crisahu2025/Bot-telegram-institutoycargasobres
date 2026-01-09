@@ -67,10 +67,20 @@ export function startBot() {
       [{ text: "📚 Inscripción al Instituto Bíblico Horeb" }],
       [{ text: "🙏 Enviar petición de oración" }],
       [{ text: "NUEVOS DE ESPIGAS" }],
+      [{ text: "🎁 Donaciones / Ofrendas" }],
       [{ text: "Terminar" }]
     ],
     resize_keyboard: true,
   });
+
+  const donationKeyboard = {
+    keyboard: [
+      [{ text: "Ver Alias y CBU" }],
+      [{ text: "Ver Código QR" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true,
+  };
 
   const cancelKeyboard = {
     keyboard: [[{ text: "Terminar" }]],
@@ -162,6 +172,12 @@ export function startBot() {
       } else if (text === "NUEVOS DE ESPIGAS") {
         await storage.updateBotUserStep(telegramId, "new_person_details");
         await bot.sendMessage(chatId, "Decime los detalles de la persona nueva:", { reply_markup: cancelKeyboard });
+      } else if (text === "🎁 Donaciones / Ofrendas") {
+        await bot.sendMessage(chatId, "Gracias por tu generosidad. Elegí una opción:", { reply_markup: donationKeyboard });
+      } else if (text === "Ver Alias y CBU") {
+        await bot.sendMessage(chatId, "📍 *Datos para transferencia:*\n\n*Alias:* iglesia.espigas.horeb\n*CBU:* 0000003100012345678901\n*Banco:* Banco Provincia", { parse_mode: "Markdown" });
+      } else if (text === "Ver Código QR") {
+        await bot.sendMessage(chatId, "📸 *Escaneá el código QR para donar:*\n\n(Aquí aparecerá el código QR real próximamente)", { parse_mode: "Markdown" });
       }
       return;
     }
