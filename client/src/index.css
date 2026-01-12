@@ -62,6 +62,19 @@
   background-color: hsl(var(--background)) !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
+  z-index: 50 !important;
+}
+
+/* Ensure Radix UI Dialog and Select components have solid backgrounds in both modes */
+[data-radix-popper-content-wrapper], 
+[role="dialog"],
+.fixed.inset-0.bg-black\/80 {
+  backdrop-filter: none !important;
+}
+
+div[role="dialog"] {
+  background-color: hsl(var(--background)) !important;
+  opacity: 1 !important;
 }
 
 @layer base {
