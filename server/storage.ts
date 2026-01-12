@@ -55,6 +55,8 @@ export class DatabaseStorage implements IStorage {
     return m;
   }
   async deleteMinistry(id: number): Promise<boolean> {
+    // Primero borrar los líderes asociados para evitar error de clave foránea
+    await db.delete(leaders).where(eq(leaders.ministry_id, id));
     const res = await db.delete(ministries).where(eq(ministries.id, id)).returning();
     return res.length > 0;
   }
