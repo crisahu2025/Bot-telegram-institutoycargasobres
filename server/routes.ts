@@ -42,15 +42,22 @@ export async function registerRoutes(
     const { id } = req.params;
     const { password } = req.body;
 
+    console.log(`Intentando borrar ministerio ID: ${id}`);
+
     if (password !== "Esteban2025") {
       return res.status(401).json({ message: "Contraseña incorrecta" });
     }
 
     try {
-      await storage.deleteMinistry(Number(id));
-      res.json({ message: "Ministerio eliminado correctamente" });
+      const success = await storage.deleteMinistry(Number(id));
+      if (success) {
+        res.json({ message: "Ministerio eliminado correctamente" });
+      } else {
+        res.status(404).json({ message: "Ministerio no encontrado en la base de datos" });
+      }
     } catch (e) {
-      res.status(404).json({ message: "Ministerio no encontrado" });
+      console.error("Error al borrar ministerio:", e);
+      res.status(500).json({ message: "Error interno del servidor" });
     }
   });
 

@@ -21,6 +21,7 @@ export default function Ministries() {
   const [selectedEnvelope, setSelectedEnvelope] = useState<EnvelopeLoad | null>(null);
   const [ministryToDelete, setMinistryToDelete] = useState<number | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const deleteMutation = useDeleteMinistry();
   
@@ -35,6 +36,7 @@ export default function Ministries() {
         toast({ title: "Éxito", description: "Ministerio eliminado correctamente" });
         setMinistryToDelete(null);
         setDeletePassword("");
+        setShowPassword(false);
       },
       onError: (error) => {
         toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -220,13 +222,28 @@ export default function Ministries() {
             </p>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={deletePassword} 
-                onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder="Ingresa la contraseña"
-              />
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"} 
+                  value={deletePassword} 
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Ingresa la contraseña"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground opacity-50" />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
