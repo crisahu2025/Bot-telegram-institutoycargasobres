@@ -58,25 +58,6 @@
   --ring: 224 76% 48%;
 }
 
-.no-transparency {
-  background-color: hsl(var(--background)) !important;
-  opacity: 1 !important;
-  backdrop-filter: none !important;
-  z-index: 50 !important;
-}
-
-/* Ensure Radix UI Dialog and Select components have solid backgrounds in both modes */
-[data-radix-popper-content-wrapper], 
-[role="dialog"],
-.fixed.inset-0.bg-black\/80 {
-  backdrop-filter: none !important;
-}
-
-div[role="dialog"] {
-  background-color: hsl(var(--background)) !important;
-  opacity: 1 !important;
-}
-
 @layer base {
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20;
@@ -86,6 +67,22 @@ div[role="dialog"] {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply font-bold tracking-tight text-foreground;
+  }
+
+  /* Force solid background on all dialogs and popovers */
+  [role="dialog"], 
+  [data-radix-portal] > div,
+  .no-transparency {
+    background-color: hsl(var(--background)) !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  }
+
+  /* Ensure the overlay is also not using problematic filters */
+  [data-aria-hidden="true"] {
+    filter: none !important;
   }
 }
 
