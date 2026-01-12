@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { insertMinistrySchema, insertLeaderSchema, ministries, leaders, prayer_requests, envelope_loads, new_people } from './schema';
+import { insertMinistrySchema, insertLeaderSchema, ministries, leaders, prayer_requests, envelope_loads, new_people, institute_enrollments, institute_payments } from './schema';
 
 export const api = {
   ministries: {
