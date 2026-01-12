@@ -8,9 +8,11 @@ import {
   UserPlus,
   Menu,
   GraduationCap,
-  Terminal
+  Terminal,
+  Moon,
+  Sun
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -27,14 +29,31 @@ const navItems = [
 export function Sidebar() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    return (localStorage.getItem("theme") as "light" | "dark") || "light";
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
   const NavContent = () => (
     <div className="flex flex-col h-full bg-card/50 backdrop-blur-sm border-r border-border">
-      <div className="p-6 border-b border-border/50">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Boni Admin
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Panel de Administración</p>
+      <div className="p-6 border-b border-border/50 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Boni Admin
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Panel de Administración</p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full">
+          {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+        </Button>
       </div>
 
       <nav className="flex-1 p-4 space-y-2">

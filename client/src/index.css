@@ -58,6 +58,12 @@
   --ring: 224 76% 48%;
 }
 
+.no-transparency {
+  background-color: hsl(var(--background)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
 @layer base {
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20;

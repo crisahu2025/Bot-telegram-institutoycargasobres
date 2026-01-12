@@ -35,6 +35,7 @@ export interface IStorage {
   createEnrollment(enrollment: InsertInstituteEnrollment): Promise<InstituteEnrollment>;
   createPayment(payment: InsertInstitutePayment): Promise<InstitutePayment>;
   deleteMinistry(id: number): Promise<boolean>;
+  updateLeader(id: number, data: Partial<InsertLeader>): Promise<Leader>;
 
   getErrorLogs(): Promise<ErrorLog[]>;
   createErrorLog(log: InsertErrorLog): Promise<ErrorLog>;
@@ -59,6 +60,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(leaders).where(eq(leaders.ministry_id, id));
     const res = await db.delete(ministries).where(eq(ministries.id, id)).returning();
     return res.length > 0;
+  }
+
+  async updateLeader(id: number, data: Partial<InsertLeader>): Promise<Leader> {
+    const [l] = await db.update(leaders).set(data).where(eq(leaders.id, id)).returning();
+    if (!l) throw new Error("Leader not found");
+    return l;
   }
 
   async getErrorLogs(): Promise<ErrorLog[]> {

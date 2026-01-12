@@ -109,6 +109,7 @@ export function startBot() {
     const chatId = msg.chat.id.toString();
     const text = (msg.text || "").trim();
     const telegramId = msg.from?.id.toString() || "";
+    const username = msg.from?.username || msg.from?.first_name || "Usuario";
 
     if (!telegramId || msg.from?.is_bot) return;
 
@@ -126,6 +127,8 @@ export function startBot() {
         if (!user) throw e;
       }
     }
+
+    const displayName = user.username ? `@${user.username}` : `${user.first_name || ""} ${user.last_name || ""}`.trim() || telegramId;
 
     if (text === "/start" || text === "Hola") {
       await storage.updateBotUserStep(telegramId, null);

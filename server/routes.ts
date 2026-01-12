@@ -78,6 +78,16 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/leaders/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const leader = await storage.updateLeader(Number(id), req.body);
+      res.json(leader);
+    } catch (e) {
+      res.status(400).json({ message: "Error updating leader" });
+    }
+  });
+
   // Requests
   app.get(api.requests.list.path, async (req, res) => {
     const requests = await storage.getRequests();

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useLeaders, useMinistries, useCreateLeader } from "@/hooks/use-dashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, User, Filter, CheckCircle2, XCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Loader2, User, Filter, CheckCircle2, XCircle, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,13 +11,92 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { insertLeaderSchema } from "@shared/schema";
+import { insertLeaderSchema, type Leader } from "@shared/schema";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { api, buildUrl } from "@shared/routes";
+
+function EditLeaderDialog({ leader, open, onOpenChange }: { leader: Leader, open: boolean, onOpenChange: (v: boolean) => void }) {
+  const { toast } = useToast();
+  const { data: ministries } = useMinistries();
+  const queryClient = useQueryClient();
+  
+  const editMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/leaders/${leader.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update leader");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.leaders.list.path] });
+      toast({ title: "Éxito", description: "Líder actualizado correctamente" });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertLeaderSchema),
+    defaultValues: {
+      name: leader.name,
+      ministry_id: leader.ministry_id || undefined,
+      active: leader.active
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="no-transparency">
+        <DialogHeader>
+          <DialogTitle>Editar Líder</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit((data) => editMutation.mutate(data))} className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Nombre Completo</Label>
+            <Input id="edit-name" {...form.register("name")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Ministerio</Label>
+            <Select 
+              defaultValue={leader.ministry_id?.toString()} 
+              onValueChange={(val) => form.setValue("ministry_id", parseInt(val))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar ministerio" />
+              </SelectTrigger>
+              <SelectContent>
+                {ministries?.map((m) => (
+                  <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="edit-active" {...form.register("active")} />
+            <Label htmlFor="edit-active">Activo</Label>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={editMutation.isPending}>
+              {editMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Leaders() {
   const [selectedMinistry, setSelectedMinistry] = useState<string>("all");
   const { data: leaders, isLoading: leadersLoading } = useLeaders(selectedMinistry !== "all" ? parseInt(selectedMinistry) : undefined);
   const { data: ministries } = useMinistries();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingLeader, setEditingLeader] = useState<Leader | null>(null);
 
   if (leadersLoading) {
     return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>;
@@ -97,8 +176,13 @@ export default function Leaders() {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        Editar
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setEditingLeader(leader)}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" /> Editar
                       </Button>
                     </td>
                   </tr>
@@ -115,6 +199,14 @@ export default function Leaders() {
           </table>
         </div>
       </div>
+
+      {editingLeader && (
+        <EditLeaderDialog 
+          leader={editingLeader} 
+          open={!!editingLeader} 
+          onOpenChange={(open) => !open && setEditingLeader(null)} 
+        />
+      )}
     </div>
   );
 }
