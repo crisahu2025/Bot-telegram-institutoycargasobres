@@ -8,7 +8,6 @@
   --font-body: 'DM Sans', sans-serif;
   --font-display: 'Outfit', sans-serif;
 
-  /* Elegant, trustworthy blue/slate palette with warm accents */
   --background: 210 20% 98%;
   --foreground: 222 47% 11%;
   
@@ -21,7 +20,7 @@
   --muted: 210 40% 96%;
   --muted-foreground: 215 16% 47%;
   
-  --accent: 38 92% 50%; /* Warm amber/gold accent for church context */
+  --accent: 38 92% 50%;
   --accent-foreground: 222 47% 11%;
   
   --destructive: 0 84% 60%;
@@ -32,6 +31,11 @@
   --ring: 221 83% 53%;
   
   --radius: 0.75rem;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
 }
 
 .dark {
@@ -56,6 +60,11 @@
   --border: 217 19% 27%;
   --input: 217 19% 27%;
   --ring: 224 76% 48%;
+
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
 }
 
 @layer base {
@@ -69,26 +78,35 @@
     @apply font-bold tracking-tight text-foreground;
   }
 
-  /* Force solid background on all dialogs and popovers */
+  /* Extreme reset for dialogs and popovers to ensure zero transparency */
   [role="dialog"], 
-  [data-radix-portal] > div,
-  .no-transparency {
-    background-color: hsl(var(--background)) !important;
+  [data-radix-popper-content-wrapper] > div,
+  [data-radix-select-content],
+  .bg-background,
+  .bg-popover,
+  .bg-card {
     opacity: 1 !important;
     backdrop-filter: none !important;
-    border: 1px solid hsl(var(--border)) !important;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
   }
 
-  /* Ensure the overlay is also not using problematic filters */
-  [data-aria-hidden="true"] {
-    filter: none !important;
+  div[role="dialog"],
+  div[data-radix-portal] > div {
+    background-color: hsl(var(--background)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.2) !important;
+  }
+
+  /* Specific fix for Select items and content */
+  [data-radix-select-content] {
+    background-color: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    z-index: 100 !important;
   }
 }
 
 @layer utilities {
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl shadow-black/5 dark:bg-black/40 dark:border-white/10;
+    @apply bg-card border border-border shadow-xl;
   }
   
   .card-hover {
