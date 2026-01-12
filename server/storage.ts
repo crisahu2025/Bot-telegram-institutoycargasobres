@@ -2,12 +2,12 @@
 import { db } from "./db";
 import {
   ministries, leaders, prayer_requests, envelope_loads, new_people, bot_users,
-  institute_enrollments, institute_payments,
+  institute_enrollments, institute_payments, error_logs,
   type Ministry, type Leader, type PrayerRequest, type EnvelopeLoad, type NewPerson, type BotUser,
-  type InstituteEnrollment, type InstitutePayment,
-  type InsertMinistry, type InsertLeader, type InsertEnvelopeLoad, type InsertInstituteEnrollment, type InsertInstitutePayment
+  type InstituteEnrollment, type InstitutePayment, type ErrorLog,
+  type InsertMinistry, type InsertLeader, type InsertEnvelopeLoad, type InsertInstituteEnrollment, type InsertInstitutePayment, type InsertErrorLog
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getMinistries(): Promise<Ministry[]>;
@@ -34,7 +34,10 @@ export interface IStorage {
 
   createEnrollment(enrollment: InsertInstituteEnrollment): Promise<InstituteEnrollment>;
   createPayment(payment: InsertInstitutePayment): Promise<InstitutePayment>;
-  deleteMinistry(id: number): Promise<void>;
+  deleteMinistry(id: number): Promise<boolean>;
+
+  getErrorLogs(): Promise<ErrorLog[]>;
+  createErrorLog(log: InsertErrorLog): Promise<ErrorLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -51,8 +54,17 @@ export class DatabaseStorage implements IStorage {
     const [m] = await db.insert(ministries).values(ministry).returning();
     return m;
   }
-  async deleteMinistry(id: number): Promise<void> {
-    await db.delete(ministries).where(eq(ministries.id, id));
+  async deleteMinistry(id: number): Promise<boolean> {
+    const res = await db.delete(ministries).where(eq(ministries.id, id)).returning();
+    return res.length > 0;
+  }
+
+  async getErrorLogs(): Promise<ErrorLog[]> {
+    return await db.select().from(error_logs).orderBy(desc(error_logs.created_at));
+  }
+  async createErrorLog(log: InsertErrorLog): Promise<ErrorLog> {
+    const [l] = await db.insert(error_logs).values(log).returning();
+    return l;
   }
 
   async getLeaders(ministryId?: number): Promise<Leader[]> {

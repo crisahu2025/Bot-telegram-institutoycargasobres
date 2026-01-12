@@ -14,6 +14,7 @@ import PrayerRequests from "@/pages/PrayerRequests";
 import EnvelopeLoads from "@/pages/EnvelopeLoads";
 import NewPeople from "@/pages/NewPeople";
 import HorebInstitute from "@/pages/HorebInstitute";
+import ErrorLogs from "@/pages/ErrorLogs";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
             <Route path="/leaders" component={Leaders} />
             <Route path="/requests" component={PrayerRequests} />
             <Route path="/new-people" component={NewPeople} />
+            <Route path="/error-logs" component={ErrorLogs} />
             <Route component={NotFound} />
           </Switch>
         </div>

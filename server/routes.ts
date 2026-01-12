@@ -99,10 +99,24 @@ export async function registerRoutes(
     res.json(payments);
   });
 
-  // New People
   app.get(api.newPeople.list.path, async (req, res) => {
     const people = await storage.getNewPeople();
     res.json(people);
+  });
+
+  // Error Logs
+  app.get(api.errorLogs.list.path, async (req, res) => {
+    const logs = await storage.getErrorLogs();
+    res.json(logs);
+  });
+
+  app.post(api.errorLogs.create.path, async (req, res) => {
+    try {
+      const log = await storage.createErrorLog(req.body);
+      res.status(201).json(log);
+    } catch (e) {
+      res.status(400).json({ message: "Invalid input" });
+    }
   });
 
   return httpServer;

@@ -98,6 +98,35 @@ export const api = {
         200: z.array(z.custom<typeof new_people.$inferSelect>()),
       },
     },
+  },
+  errorLogs: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/error-logs',
+      responses: {
+        200: z.array(z.object({
+          id: z.number(),
+          source: z.string(),
+          message: z.string(),
+          stack: z.string().nullable(),
+          context: z.any(),
+          created_at: z.string()
+        })),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/error-logs',
+      input: z.object({
+        source: z.string(),
+        message: z.string(),
+        stack: z.string().optional(),
+        context: z.any().optional()
+      }),
+      responses: {
+        201: z.any(),
+      },
+    }
   }
 };
 

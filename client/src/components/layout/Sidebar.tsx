@@ -7,7 +7,8 @@ import {
   Church, 
   UserPlus,
   Menu,
-  GraduationCap
+  GraduationCap,
+  Terminal
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/leaders", label: "Líderes", icon: Users },
   { href: "/requests", label: "Peticiones de Oración", icon: HeartHandshake },
   { href: "/new-people", label: "Personas Nuevas", icon: UserPlus },
+  { href: "/error-logs", label: "Logs de Errores", icon: Terminal },
 ];
 
 export function Sidebar() {

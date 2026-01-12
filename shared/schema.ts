@@ -90,6 +90,15 @@ export const institute_payments = pgTable("institute_payments", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+export const error_logs = pgTable("error_logs", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull(), // e.g. "Frontend", "Bot", "Backend"
+  message: text("message").notNull(),
+  stack: text("stack"),
+  context: jsonb("context"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // === SCHEMAS ===
 export const insertBotUserSchema = createInsertSchema(bot_users);
 export const insertPrayerRequestSchema = createInsertSchema(prayer_requests);
@@ -99,6 +108,7 @@ export const insertEnvelopeLoadSchema = createInsertSchema(envelope_loads);
 export const insertInstituteEnrollmentSchema = createInsertSchema(institute_enrollments);
 export const insertInstitutePaymentSchema = createInsertSchema(institute_payments);
 export const insertNewPeopleSchema = createInsertSchema(new_people);
+export const insertErrorLogSchema = createInsertSchema(error_logs);
 
 // === TYPES ===
 export type BotUser = typeof bot_users.$inferSelect;
@@ -109,6 +119,7 @@ export type EnvelopeLoad = typeof envelope_loads.$inferSelect;
 export type InstituteEnrollment = typeof institute_enrollments.$inferSelect;
 export type InstitutePayment = typeof institute_payments.$inferSelect;
 export type NewPerson = typeof new_people.$inferSelect;
+export type ErrorLog = typeof error_logs.$inferSelect;
 
 export type InsertBotUser = z.infer<typeof insertBotUserSchema>;
 export type InsertPrayerRequest = z.infer<typeof insertPrayerRequestSchema>;
@@ -118,3 +129,4 @@ export type InsertEnvelopeLoad = z.infer<typeof insertEnvelopeLoadSchema>;
 export type InsertInstituteEnrollment = z.infer<typeof insertInstituteEnrollmentSchema>;
 export type InsertInstitutePayment = z.infer<typeof insertInstitutePaymentSchema>;
 export type InsertNewPeople = z.infer<typeof insertNewPeopleSchema>;
+export type InsertErrorLog = z.infer<typeof insertErrorLogSchema>;
