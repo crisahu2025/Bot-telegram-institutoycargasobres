@@ -190,11 +190,14 @@ export function startBot() {
       await storage.updateBotUserStep(telegramId, "env_mentor", { ministry_name: text });
       await bot.sendMessage(chatId, "¿Quién es tu mentor?", { reply_markup: cancelKeyboard });
     } else if (state === "env_mentor") {
-      await storage.updateBotUserStep(telegramId, "env_attendance", { mentor_name: text });
-      await bot.sendMessage(chatId, "¿Cuántas personas asistieron a la espiga y si hubo una persona nueva? (Ej: 8 personas - Nueva: Juan Pérez)", { reply_markup: cancelKeyboard });
+      await storage.updateBotUserStep(telegramId, "env_lider", { mentor_name: text });
+      await bot.sendMessage(chatId, "¿Quién es el líder que carga el sobre?", { reply_markup: cancelKeyboard });
+    } else if (state === "env_lider") {
+      await storage.updateBotUserStep(telegramId, "env_attendance", { leader_name: text });
+      await bot.sendMessage(chatId, "Nombre de las personas que asistieron\n\nEj: Juan Pérez, Gustavo Ramirez y Claudio Espinosa", { reply_markup: cancelKeyboard });
     } else if (state === "env_attendance") {
       await storage.updateBotUserStep(telegramId, "env_prayer_motive", { people_count: text });
-      await bot.sendMessage(chatId, "¿Faltó alguien a la espiga y tienen algún motivo de oración?", { reply_markup: cancelKeyboard });
+      await bot.sendMessage(chatId, "Durante la espiga se pidió un motivo de oración\n\nEj: Juan Pérez por trabajo\n\nEj: Ninguno", { reply_markup: cancelKeyboard });
     } else if (state === "env_prayer_motive") {
       await storage.updateBotUserStep(telegramId, "env_offering", { prayer_motive: text });
       await bot.sendMessage(chatId, "¿Cuánto fue el monto de ofrenda? (solo números, ej: 5000)", { reply_markup: cancelKeyboard });

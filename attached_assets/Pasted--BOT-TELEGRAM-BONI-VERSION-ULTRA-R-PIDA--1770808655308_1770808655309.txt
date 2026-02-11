@@ -1,0 +1,576 @@
+// ==================================================
+// BOT TELEGRAM BONI – VERSION ULTRA RÁPIDA
+// Sin envío de mails en tiempo real - Todo por trigger
+// ==================================================
+const TELEGRAM_TOKEN = "8503063564:AAEWJNmL7i8GK8xcdsm3KYoFKWApsE-pw24";
+const SPREADSHEET_ID = "1_AtufxeQhg2IrMRWpHdhrafKEOYepsXa07mDDPm2lac";
+const DRIVE_FOLDER_ID = "1agh6iVBv-8eFSHrChnc8G-63nGkI0pWW";
+const EMAIL_REPORTE_GENERAL = "cris.ahu777@gmail.com";
+// Cache para evitar múltiples lecturas
+let sheetsCache = null;
+let sheetsCacheTime = 0;
+const CACHE_DURATION = 300000; // 5 minutos
+// ==================================================
+// TELEGRAM
+// ==================================================
+function sendMessage(chatId, text, keyboard = null, inlineKeyboard = null) {
+  const payload = { 
+    chat_id: chatId, 
+    text,
+    parse_mode: "HTML"
+  };
+  if (keyboard) payload.reply_markup = keyboard;
+  if (inlineKeyboard) payload.reply_markup = inlineKeyboard;
+  
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  UrlFetchApp.fetch(
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+    options
+  );
+}
+// ==================================================
+// MEMORIA
+// ==================================================
+function getState(chatId) {
+  const d = PropertiesService.getUserProperties().getProperty(chatId);
+  return d ? JSON.parse(d) : {};
+}
+function setState(chatId, s) {
+  PropertiesService.getUserProperties().setProperty(chatId, JSON.stringify(s));
+}
+function clearState(chatId) {
+  PropertiesService.getUserProperties().deleteProperty(chatId);
+}
+// ==================================================
+// DATA - CON CACHE
+// ==================================================
+function getSheets() {
+  const now = Date.now();
+  if (!sheetsCache || (now - sheetsCacheTime) > CACHE_DURATION) {
+    sheetsCache = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets();
+    sheetsCacheTime = now;
+  }
+  return sheetsCache;
+}
+function getMinisteriosSheets() {
+  return getSheets().filter(s => {
+    const name = s.getName();
+    return name !== "PETICIONES" &&
+           name !== "NUEVOS DE ESPIGAS" &&
+           name !== "INSTITUTO DE AÑO" &&
+           name !== "INSTITUTO MATERIA VIRTUAL";
+  });
+}
+// ==================================================
+// VERIFICAR LÍDER
+// ==================================================
+function esLiderAutorizado(nombreLider, sheetName) {
+  const sheet = getSheets().find(s => s.getName() === sheetName);
+  if (!sheet) return false;
+ 
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return false;
+ 
+  const lideres = sheet.getRange(`H2:H${lastRow}`).getValues();
+  const nombreNorm = nombreLider.toLowerCase().trim();
+ 
+  return lideres.some(row => row[0] && row[0].toString().toLowerCase().trim() === nombreNorm);
+}
+// ==================================================
+// VALIDACIONES
+// ==================================================
+function tieneLetras(texto) {
+  return /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(texto);
+}
+function soloNumeros(texto) {
+  return /^\d+(\.\d+)?$/.test(texto.trim());
+}
+function esNumero(texto) {
+  return /^\d+$/.test(texto.trim());
+}
+// ==================================================
+// TECLADOS
+// ==================================================
+function mainKeyboard(mostrarConsulta = false) {
+  const botones = [];
+  if (mostrarConsulta) botones.push([{ text: "Consultar líderes" }]);
+  botones.push(
+    [{ text: "Cargar sobre de espiga" }],
+    [{ text: "🙏 Enviar petición de oración" }],
+    [{ text: "Terminar" }]
+  );
+  return { keyboard: botones, resize_keyboard: true };
+}
+function ministeriosKeyboard() {
+  const rows = getMinisteriosSheets().map(s => [{ text: s.getName() }]);
+  rows.push([{ text: "Terminar" }]);
+  return { keyboard: rows, resize_keyboard: true };
+}
+function peticionConWhatsAppKeyboard() {
+  return { keyboard: [[{ text: "Terminar" }]], resize_keyboard: true };
+}
+function confirmKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "✅ Confirmar y guardar" }],
+      [{ text: "❌ Cancelar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+// ==================================================
+// FOTO
+// ==================================================
+function savePhoto(fileId) {
+  const info = JSON.parse(
+    UrlFetchApp.fetch(
+      `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`
+    ).getContentText()
+  );
+  const blob = UrlFetchApp.fetch(
+    `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${info.result.file_path}`
+  ).getBlob();
+  const f = DriveApp.getFolderById(DRIVE_FOLDER_ID).createFile(blob);
+  f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return f.getUrl();
+}
+// ==================================================
+// DETECCIÓN DE PERSONA NUEVA (sin mail, se envía por trigger)
+// ==================================================
+function detectarPersonaNueva(texto) {
+  const textoLower = texto.toLowerCase();
+  return textoLower.includes("nuevo") || textoLower.includes("nueva");
+}
+function registrarPersonaNueva(textoAsistentes, userName) {
+  const sheet = getSheets().find(s => s.getName() === "NUEVOS DE ESPIGAS");
+  if (!sheet) return;
+ 
+  const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+ 
+  // Solo guardar, NO enviar mail (columna E para marcar pendiente)
+  sheet.appendRow([textoAsistentes, fechaHora, userName, "", "PENDIENTE"]);
+}
+// ==================================================
+// PETICIÓN DE ORACIÓN (sin mail, se envía por trigger)
+// ==================================================
+function esMotivoDeOracion(texto) {
+  const textoLower = texto.toLowerCase().trim();
+  return !["ninguna", "ninguno", "nada"].some(p => textoLower.includes(p));
+}
+function registrarPeticionOracion(motivo, userName, origen = "directa") {
+  const sheet = getSheets().find(s => s.getName() === "PETICIONES");
+  if (!sheet) return;
+ 
+  const fechaHora = new Date();
+ 
+  // Solo guardar, NO enviar mail (columna E para marcar pendiente)
+  sheet.appendRow([motivo, fechaHora, userName, "", "PENDIENTE", origen]);
+}
+// ==================================================
+// WEBHOOK - ULTRA RÁPIDO (sin mails)
+// ==================================================
+function doPost(e) {
+  try {
+    const update = JSON.parse(e.postData.contents);
+    if (!update.message) return ContentService.createTextOutput(JSON.stringify({ok: true}));
+    
+    const chatId = update.message.chat.id;
+    const userName = update.message.from.first_name +
+      (update.message.from.last_name ? " " + update.message.from.last_name : "");
+    const text = update.message.text;
+    const state = getState(chatId);
+    // TERMINAR
+    if (text === "Terminar" || text === "❌ Cancelar") {
+      clearState(chatId);
+      sendMessage(chatId, "Proceso cancelado. Gracias por comunicarte con BONI 🙌", mainKeyboard(false));
+      return;
+    }
+    // CÓDIGO DE ACCESO
+    if (text === "Esteban2025" && !state.step) {
+      setState(chatId, { accesoConsulta: true });
+      sendMessage(chatId, "Hola Soy BONI 🤍\n¿En qué te puedo ayudar hoy?", mainKeyboard(true));
+      return;
+    }
+    // CONSULTAR LÍDERES
+    if (text === "Consultar líderes") {
+      if (!state.accesoConsulta) {
+        sendMessage(chatId, "No tenés acceso a esta función.", mainKeyboard(false));
+        return;
+      }
+      setState(chatId, { step: "consultar", accesoConsulta: true });
+      sendMessage(chatId, "Seleccioná un ministerio:", ministeriosKeyboard());
+      return;
+    }
+    // CARGAR SOBRE
+    if (text === "Cargar sobre de espiga") {
+      const nuevoState = { step: "cargar_ministerio" };
+      if (state.accesoConsulta) nuevoState.accesoConsulta = true;
+      setState(chatId, nuevoState);
+      sendMessage(chatId, "¿En qué ministerio estás liderando?", ministeriosKeyboard());
+      return;
+    }
+    // PETICIÓN DE ORACIÓN
+    if (text === "🙏 Enviar petición de oración") {
+      const nuevoState = { step: "peticion" };
+      if (state.accesoConsulta) nuevoState.accesoConsulta = true;
+      setState(chatId, nuevoState);
+     
+      const sheet = getSheets().find(s => s.getName() === "PETICIONES");
+      const whatsappLink = sheet ? sheet.getRange("G2").getValue() : null;
+     
+      const mensaje = "🙏 ¿Cuál es el motivo de tu petición de oración?\n\nSi preferís hablar directamente con alguien:";
+     
+      if (whatsappLink) {
+        const inlineKeyboard = {
+          inline_keyboard: [[{ text: "💬 Abrir WhatsApp", url: whatsappLink }]]
+        };
+        sendMessage(chatId, mensaje, null, inlineKeyboard);
+        Utilities.sleep(500);
+        sendMessage(chatId, "Podés escribir tu petición o usar el botón de WhatsApp 👆", peticionConWhatsAppKeyboard());
+      } else {
+        sendMessage(chatId, "🙏 ¿Cuál es el motivo de tu petición de oración?", peticionConWhatsAppKeyboard());
+      }
+      return;
+    }
+    // MENÚ INICIAL
+    if (!state.step) {
+      sendMessage(chatId, "Hola Soy BONI 🤍\n¿En qué te puedo ayudar hoy?", mainKeyboard(false));
+      return;
+    }
+    // PETICIÓN DE ORACIÓN (guardar SIN mail)
+    if (state.step === "peticion") {
+      registrarPeticionOracion(text, userName, "directa");
+      clearState(chatId);
+      sendMessage(
+        chatId,
+        "🙏 Gracias por compartir tu petición.\nVamos a estar orando por vos 🤍",
+        mainKeyboard(state.accesoConsulta || false)
+      );
+      return;
+    }
+    // CONSULTAR (mostrar líderes)
+    if (state.step === "consultar") {
+      const sheet = getSheets().find(s => s.getName() === text);
+      if (sheet) {
+        const lastRow = sheet.getLastRow();
+        const data = sheet.getRange(`H2:H${lastRow}`).getValues();
+        const lideres = data.flat().filter(String);
+        const whatsappLink = sheet.getRange("O2").getValue();
+        let msg = "👥 Líderes del ministerio:\n\n";
+        lideres.forEach(l => msg += `• ${l}\n`);
+        msg += whatsappLink ? "\n📲 Contacto disponible por WhatsApp" : "\n⚠️ Contacto no disponible.";
+        clearState(chatId);
+        sendMessage(chatId, msg, mainKeyboard(true));
+      }
+      return;
+    }
+    // FLUJO DE CARGA
+    if (state.step === "cargar_ministerio") {
+      state.sheetName = text;
+      state.step = "mentor";
+      setState(chatId, state);
+      sendMessage(chatId, "¿Quién es tu mentor?");
+      return;
+    }
+    if (state.step === "mentor") {
+      state.mentor = text;
+      state.step = "lider";
+      setState(chatId, state);
+      sendMessage(chatId, "¿Quién es el líder que carga el sobre?");
+      return;
+    }
+    if (state.step === "lider") {
+      if (!esLiderAutorizado(text, state.sheetName)) {
+        state.intentosLider = (state.intentosLider || 0) + 1;
+       
+        if (state.intentosLider === 1) {
+          setState(chatId, state);
+          sendMessage(chatId, "❌ No podés cargar el sobre, no estás habilitado como líder.\n\nPor favor, poné tu nombre completo:");
+          return;
+        } else {
+          clearState(chatId);
+          sendMessage(chatId, "❌ No tenés autorización para cargar sobres en este ministerio.\nSolo los líderes registrados pueden hacerlo.", mainKeyboard(state.accesoConsulta || false));
+          return;
+        }
+      }
+     
+      state.lider = text;
+      state.step = "asistentes";
+      delete state.intentosLider;
+      setState(chatId, state);
+      sendMessage(chatId, "Nombre de las personas que asistieron\n\n Ej: Juan Pérez, Gustavo Ramirez y Claudio Espinosa");
+      return;
+    }
+    if (state.step === "asistentes") {
+      if (!tieneLetras(text)) {
+        sendMessage(chatId, "⚠️ Por favor, incluí al menos una letra en tu respuesta. No podés enviar solo números.\n\n Ej: Juan Pérez, Gustavo Ramirez y Claudio Espinosa");
+        return;
+      }
+     
+      state.asistentes = text;
+      state.step = "motivo";
+      setState(chatId, state);
+      sendMessage(chatId, "Durante la espiga se pidió un motivo de oración\n\n Ej: Juan Pérez por trabajo\n\n Ej: Ninguno");
+      return;
+    }
+    if (state.step === "motivo") {
+      if (esNumero(text)) {
+        sendMessage(chatId, "⚠️ No podés enviar solo números. Por favor, escribí tu respuesta con texto.\n\n Ej: Juan Pérez por trabajo\n\n Ej: Ninguno");
+        return;
+      }
+     
+      state.motivo = text;
+      state.tieneMotivoOracion = esMotivoDeOracion(text);
+      state.step = "ausencias";
+      setState(chatId, state);
+      sendMessage(chatId, "¿Qué personas no asistieron a la espiga y motivo de ausencia?\n\n Ej: María López por viaje, Carlos Ruiz por enfermedad\n\n Ej: Ninguno");
+      return;
+    }
+    if (state.step === "ausencias") {
+      if (esNumero(text)) {
+        sendMessage(chatId, "⚠️ No podés enviar solo números. Por favor, escribí tu respuesta con texto.\n\n Ej: María López por viaje, Carlos Ruiz por enfermedad\n\n Ej: Ninguno");
+        return;
+      }
+     
+      state.ausencias = text;
+      state.step = "ofrenda";
+      setState(chatId, state);
+      sendMessage(chatId, "¿Cuánto fue el monto de ofrenda? (Ej: 5000)");
+      return;
+    }
+    if (state.step === "ofrenda") {
+      if (!soloNumeros(text)) {
+        sendMessage(chatId, "⚠️ Por favor, ingresá solo números.\n\n Ej: 5000");
+        return;
+      }
+     
+      state.ofrenda = text;
+      state.step = "foto";
+      setState(chatId, state);
+      sendMessage(chatId, "Subí la foto del sobre de espiga.");
+      return;
+    }
+    if (update.message.photo && state.step === "foto") {
+      state.foto = savePhoto(update.message.photo.pop().file_id);
+      state.step = "confirmar";
+      setState(chatId, state);
+      sendMessage(
+        chatId,
+        `📌 Confirmá los datos:
+Ministerio: ${state.sheetName}
+Mentor: ${state.mentor}
+Líder: ${state.lider}
+Asistentes: ${state.asistentes}
+Motivo de oración: ${state.motivo}
+Ausencias: ${state.ausencias}
+Ofrenda: ${state.ofrenda}`,
+        confirmKeyboard()
+      );
+      return;
+    }
+    if (state.step === "confirmar" && text === "✅ Confirmar y guardar") {
+      const sheet = getSheets().find(s => s.getName() === state.sheetName);
+      if (sheet) {
+        const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
+        const lastRow = sheet.getLastRow() + 1;
+        // MODIFICADO: Ahora incluye ausencias en columna J (posición 10)
+        const valores = [
+          [state.mentor, state.lider, state.foto, state.motivo, fechaHora, userName, "PENDIENTE", "", "", state.ausencias, "", "", state.asistentes, state.ofrenda, ""]
+        ];
+        sheet.getRange(lastRow, 1, 1, 15).setValues(valores);
+        // Registrar persona nueva (SIN mail)
+        if (detectarPersonaNueva(state.asistentes)) {
+          registrarPersonaNueva(state.asistentes, userName);
+        }
+        // Registrar petición de oración (SIN mail)
+        if (state.tieneMotivoOracion) {
+          registrarPeticionOracion(state.motivo, userName, "espiga");
+        }
+      }
+      clearState(chatId);
+      sendMessage(chatId, "✅ Sobre de espiga cargada con éxito.\nGracias por tu fidelidad 🙏", mainKeyboard(state.accesoConsulta || false));
+    }
+  } catch (error) {
+    Logger.log("Error en doPost: " + error);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ok: true}));
+}
+// ==================================================
+// TRIGGER: ENVIAR TODOS LOS MAILS PENDIENTES
+// Ejecutar cada 5-10 minutos
+// ==================================================
+function enviarTodosLosMails() {
+  enviarMailsEspigas();
+  enviarMailsPersonasNuevas();
+  enviarMailsPeticiones();
+}
+// ==================================================
+// MAIL 1: ESPIGAS DE MINISTERIOS
+// ==================================================
+function enviarMailsEspigas() {
+  const sheets = getSheets();
+  sheets.forEach(sheet => {
+    const sheetName = sheet.getName();
+   
+    // Omitir hojas especiales
+    if (["PETICIONES", "NUEVOS DE ESPIGAS", "INSTITUTO DE AÑO", "INSTITUTO MATERIA VIRTUAL"].includes(sheetName)) return;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    // Leer hasta columna 15
+    const allData = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+   
+    // Emails del ministerio (columna I)
+    const emails = sheet.getRange(`I2:I${lastRow}`).getValues()
+      .flat()
+      .filter(e => e && e.toString().trim());
+    if (emails.length === 0) return;
+    allData.forEach((row, index) => {
+      // MODIFICADO: Ahora incluye ausencias en la posición 9 (columna J)
+      const [mentor, lider, foto, motivo, fechaHora, usuario, status, , , ausencias, , , asistentes, ofrenda] = row;
+      
+      if (status !== "PENDIENTE") return;
+      const cuerpoMail = `📋 NUEVA ESPIGA REGISTRADA
+
+═══════════════════════════════════
+
+📌 INFORMACIÓN GENERAL
+Ministerio: ${sheetName}
+Mentor: ${mentor}
+Líder: ${lider}
+Usuario Telegram: ${usuario}
+Fecha y hora: ${fechaHora}
+
+═══════════════════════════════════
+
+👥 ASISTENCIA
+Asistentes: ${asistentes || "No especificado"}
+Ausencias: ${ausencias || "No especificado"}
+
+═══════════════════════════════════
+
+🙏 PETICIONES Y OFRENDA
+Motivo de oración: ${motivo}
+Monto de ofrenda: ${ofrenda || "No especificado"}
+
+═══════════════════════════════════
+
+📸 COMPROBANTE
+Para ver la foto del sobre, hacé clic aquí:
+${foto}
+
+═══════════════════════════════════
+
+Este es un correo automático generado por BONI 🤍`;
+      try {
+        emails.forEach(mail => {
+          MailApp.sendEmail(mail, `Nueva espiga cargada – ${sheetName}`, cuerpoMail);
+        });
+        sheet.getRange(index + 2, 7).setValue("ENVIADO");
+      } catch (error) {
+        Logger.log(`Error enviando mail de espiga: ${error}`);
+        sheet.getRange(index + 2, 7).setValue("ERROR");
+      }
+    });
+  });
+}
+// ==================================================
+// MAIL 2: PERSONAS NUEVAS
+// ==================================================
+function enviarMailsPersonasNuevas() {
+  const sheet = getSheets().find(s => s.getName() === "NUEVOS DE ESPIGAS");
+  if (!sheet) return;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  // Leer datos (columnas A-E)
+  const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+ 
+  // Emails (columna D)
+  const emails = sheet.getRange(`D2:D${lastRow}`).getValues()
+    .flat()
+    .filter(e => e && e.toString().trim());
+  if (emails.length === 0) return;
+  data.forEach((row, index) => {
+    const [textoAsistentes, fechaHora, userName, , estadoMail] = row;
+    // Solo procesar si está PENDIENTE
+    if (estadoMail !== "PENDIENTE") return;
+    const cuerpoMail = `Se detectó una persona nueva en una espiga.
+Datos de asistencia: ${textoAsistentes}
+Usuario que registró: ${userName}
+Fecha y hora: ${fechaHora}`;
+    try {
+      emails.forEach(mail => {
+        MailApp.sendEmail(mail, "Se detectó una persona nueva en una espiga", cuerpoMail);
+      });
+      // Marcar como enviado (columna E)
+      sheet.getRange(index + 2, 5).setValue("ENVIADO");
+    } catch (error) {
+      Logger.log(`Error enviando mail de persona nueva: ${error}`);
+      sheet.getRange(index + 2, 5).setValue("ERROR");
+    }
+  });
+}
+// ==================================================
+// MAIL 3: PETICIONES DE ORACIÓN
+// ==================================================
+function enviarMailsPeticiones() {
+  const sheet = getSheets().find(s => s.getName() === "PETICIONES");
+  if (!sheet) return;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  // Leer datos (columnas A-F)
+  const data = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+ 
+  // Email destino (celda D2)
+  const emailDestino = sheet.getRange("D2").getValue();
+  if (!emailDestino) return;
+  data.forEach((row, index) => {
+    const [motivo, fechaHora, userName, , estadoMail, origen] = row;
+    // Solo procesar si está PENDIENTE
+    if (estadoMail !== "PENDIENTE") return;
+    const tipoOrigen = origen === "espiga" ? "(desde carga de espiga)" : "";
+    const cuerpoMail = `Se recibió una nueva petición de oración ${tipoOrigen}.
+Motivo: ${motivo}
+Usuario: ${userName}
+Fecha y hora: ${fechaHora}`;
+    try {
+      MailApp.sendEmail(
+        emailDestino,
+        `Nueva petición de oración ${tipoOrigen}`,
+        cuerpoMail
+      );
+      // Marcar como enviado (columna E)
+      sheet.getRange(index + 2, 5).setValue("ENVIADO");
+    } catch (error) {
+      Logger.log(`Error enviando mail de petición: ${error}`);
+      sheet.getRange(index + 2, 5).setValue("ERROR");
+    }
+  });
+}
+// ==================================================
+// REPORTE SEMANAL
+// ==================================================
+function enviarReporteSemanalGeneral() {
+  const sheets = getMinisteriosSheets();
+  const hoy = new Date();
+  const desde = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+  let cuerpo = "Reporte semanal de ministerios\n\n";
+  sheets.forEach(sheet => {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      cuerpo += `${sheet.getName()}: no registró cargas\n`;
+      return;
+    }
+   
+    const fechas = sheet.getRange(2, 5, lastRow - 1, 1).getValues();
+    const cantidad = fechas.filter(f => f[0] instanceof Date && f[0] >= desde).length;
+    cuerpo += `${sheet.getName()}: ${cantidad > 0 ? cantidad + " sobres cargados" : "no registró cargas"}\n`;
+  });
+  MailApp.sendEmail(EMAIL_REPORTE_GENERAL, "Reporte semanal de ministerios", cuerpo);
+}
