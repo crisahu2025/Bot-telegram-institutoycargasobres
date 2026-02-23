@@ -3,23 +3,32 @@ import TelegramBot from "node-telegram-bot-api";
 import { storage } from "./storage";
 import nodemailer from "nodemailer";
 
-const token = process.env.TELEGRAM_TOKEN || "8557005763:AAFs3AvvarCmiDYHxBAkQZuKcOUOBOmDVis";
+const token = process.env.TELEGRAM_TOKEN;
+
+if (!token) {
+  throw new Error("TELEGRAM_TOKEN is not defined in environment variables");
+}
 
 let bot: TelegramBot;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'cris.ahu777@gmail.com',
-    pass: process.env.EMAIL_PASSWORD || 'your-app-password'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
   }
 });
 
 async function sendNotificationEmail(subject: string, text: string) {
   try {
+    const emailUser = process.env.EMAIL_USER;
+    if (!emailUser) {
+      console.warn("EMAIL_USER not set, skipping email notification");
+      return;
+    }
     await transporter.sendMail({
-      from: 'cris.ahu777@gmail.com',
-      to: 'cris.ahu777@gmail.com',
+      from: emailUser,
+      to: emailUser,
       subject: subject,
       text: text,
     });
@@ -286,48 +295,48 @@ export function startBot() {
       await storage.updateBotUserStep(telegramId, null);
       await bot.sendMessage(chatId, "✅ Proceso completado exitosamente.", { reply_markup: mainKeyboard() });
     } else if (state === "inst_pay_name") {
-        await storage.updateBotUserStep(telegramId, "inst_pay_photo", { full_name: text });
-        await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
+      await storage.updateBotUserStep(telegramId, "inst_pay_photo", { full_name: text });
+      await bot.sendMessage(chatId, "Cargá el comprobante de pago del mes:", { reply_markup: cancelKeyboard });
     } else if (state === "inst_pay_photo" && msg.photo) {
-        const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
-        await storage.createPayment({
-            full_name: session.full_name,
-            photo_monthly: photoUrl,
-            telegram_id: telegramId,
-            user_name: getUserName(msg)
-        });
-        await storage.updateBotUserStep(telegramId, null);
-        await bot.sendMessage(chatId, "✅ Comprobante de pago guardado correctamente.", { reply_markup: mainKeyboard() });
+      const photoUrl = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
+      await storage.createPayment({
+        full_name: session.full_name,
+        photo_monthly: photoUrl,
+        telegram_id: telegramId,
+        user_name: getUserName(msg)
+      });
+      await storage.updateBotUserStep(telegramId, null);
+      await bot.sendMessage(chatId, "✅ Comprobante de pago guardado correctamente.", { reply_markup: mainKeyboard() });
     }
 
     // --- FLOW: PRAYER ---
     else if (state === "prayer_request") {
-        await storage.createRequest({
-            telegram_id: telegramId,
-            user_name: getUserName(msg),
-            content: text
-        });
-        await storage.updateBotUserStep(telegramId, null);
-        await sendNotificationEmail(
-          `Nueva Petición de Oración - ${getUserName(msg)}`,
-          `Petición: ${text}`
-        );
-        await bot.sendMessage(chatId, "🙏 Gracias por compartir tu petición.\nVamos a estar orando por vos 🤍", { reply_markup: mainKeyboard() });
+      await storage.createRequest({
+        telegram_id: telegramId,
+        user_name: getUserName(msg),
+        content: text
+      });
+      await storage.updateBotUserStep(telegramId, null);
+      await sendNotificationEmail(
+        `Nueva Petición de Oración - ${getUserName(msg)}`,
+        `Petición: ${text}`
+      );
+      await bot.sendMessage(chatId, "🙏 Gracias por compartir tu petición.\nVamos a estar orando por vos 🤍", { reply_markup: mainKeyboard() });
     }
 
     // --- FLOW: NEW PERSON ---
     else if (state === "new_person_details") {
-        await storage.createNewPerson({
-            telegram_id: telegramId,
-            recorded_by: getUserName(msg),
-            details: text
-        });
-        await storage.updateBotUserStep(telegramId, null);
-        await sendNotificationEmail(
-          `Nueva Persona Registrada - ${getUserName(msg)}`,
-          `Detalles: ${text}`
-        );
-        await bot.sendMessage(chatId, "✅ Persona nueva registrada correctamente.", { reply_markup: mainKeyboard() });
+      await storage.createNewPerson({
+        telegram_id: telegramId,
+        recorded_by: getUserName(msg),
+        details: text
+      });
+      await storage.updateBotUserStep(telegramId, null);
+      await sendNotificationEmail(
+        `Nueva Persona Registrada - ${getUserName(msg)}`,
+        `Detalles: ${text}`
+      );
+      await bot.sendMessage(chatId, "✅ Persona nueva registrada correctamente.", { reply_markup: mainKeyboard() });
     }
   });
 

@@ -17,7 +17,7 @@ export default function HorebInstitute() {
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
 
   if (enrollLoading || payLoading) {
-    return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>;
+    return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
   const toggleSort = () => setSortOrder(prev => prev === "asc" ? "desc" : "asc");
@@ -36,26 +36,59 @@ export default function HorebInstitute() {
       return sortOrder === "asc" ? comparison : -comparison;
     });
 
+  const totalEnrollments = enrollments?.length || 0;
+  const totalPayments = payments?.length || 0;
+
   return (
-    <div className="space-y-8">
-      <PageHeader 
-        title="Instituto Bíblico Horeb" 
-        description="Gestión de alumnos, inscripciones y pagos." 
+    <div className="space-y-8 pb-12">
+      <PageHeader
+        title="Instituto Bíblico Horeb"
+        description="Gestión integral de alumnos, inscripciones y seguimiento de pagos."
       />
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card p-4 rounded-xl border border-border/50 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <GraduationCap className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Total Alumnos</p>
+            <h3 className="text-2xl font-bold">{totalEnrollments}</h3>
+          </div>
+        </div>
+        <div className="bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-green-500/10 rounded-xl">
+            <ReceiptText className="w-6 h-6 text-green-500" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Pagos Registrados</p>
+            <h3 className="text-2xl font-bold">{totalPayments}</h3>
+          </div>
+        </div>
+        <div className="bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-amber-500/10 rounded-xl">
+            <Calendar className="w-6 h-6 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Ciclo Lectivo</p>
+            <h3 className="text-2xl font-bold">2025</h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50 shadow-sm">
         <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar alumno..." 
-            className="pl-10" 
+          <Input
+            placeholder="Buscar por nombre de alumno..."
+            className="pl-10 bg-background/50"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" onClick={toggleSort} className="gap-2 w-full md:w-auto">
+        <Button variant="outline" onClick={toggleSort} className="gap-2 w-full md:w-auto hover:bg-primary/5">
           <ArrowUpDown className="w-4 h-4" />
-          Orden Alfabético ({sortOrder === "asc" ? "A-Z" : "Z-A"})
+          {sortOrder === "asc" ? "A-Z" : "Z-A"}
         </Button>
       </div>
 
