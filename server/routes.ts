@@ -5,19 +5,17 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { startBot } from "./bot";
-import { db } from "./db";
-import { institute_enrollments, institute_payments } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // Start the bot
   try {
-      startBot();
+    startBot();
   } catch (e) {
-      console.error("Failed to start bot:", e);
+    console.error("Failed to start bot:", e);
   }
 
   // === API ROUTES ===
@@ -30,11 +28,11 @@ export async function registerRoutes(
 
   app.post(api.ministries.create.path, async (req, res) => {
     try {
-        const input = api.ministries.create.input.parse(req.body);
-        const ministry = await storage.createMinistry(input);
-        res.status(201).json(ministry);
+      const input = api.ministries.create.input.parse(req.body);
+      const ministry = await storage.createMinistry(input);
+      res.status(201).json(ministry);
     } catch (e) {
-        res.status(400).json({ message: "Invalid input" });
+      res.status(400).json({ message: "Invalid input" });
     }
   });
 
@@ -70,11 +68,11 @@ export async function registerRoutes(
 
   app.post(api.leaders.create.path, async (req, res) => {
     try {
-        const input = api.leaders.create.input.parse(req.body);
-        const leader = await storage.createLeader(input);
-        res.status(201).json(leader);
+      const input = api.leaders.create.input.parse(req.body);
+      const leader = await storage.createLeader(input);
+      res.status(201).json(leader);
     } catch (e) {
-        res.status(400).json({ message: "Invalid input" });
+      res.status(400).json({ message: "Invalid input" });
     }
   });
 
@@ -105,14 +103,14 @@ export async function registerRoutes(
     }
   });
 
-  // Institute
+  // Institute (Now fetched through specific storage methods)
   app.get(api.institute.enrollments.path, async (req, res) => {
-    const enrollments = await db.select().from(institute_enrollments);
+    const enrollments = await storage.getEnrollments();
     res.json(enrollments);
   });
 
   app.get(api.institute.payments.path, async (req, res) => {
-    const payments = await db.select().from(institute_payments);
+    const payments = await storage.getPayments();
     res.json(payments);
   });
 

@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
 
 async function sendNotificationEmail(subject: string, text: string) {
   try {
-    const emailUser = process.env.EMAIL_USER;
+    const emailUser = process.env.EMAIL_USER || 'programacioniglesiagranrey@gmail.com';
     if (!emailUser) {
       console.warn("EMAIL_USER not set, skipping email notification");
       return;
