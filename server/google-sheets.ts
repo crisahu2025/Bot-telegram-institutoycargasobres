@@ -1,11 +1,24 @@
-import { google } from 'googleapis';
+const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || '';
+const SECRET_KEY = "Horeb2025";
 
-export async function getGoogleSheetsClient() {
-    const auth = new google.auth.GoogleAuth({
-        credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT || '{}'),
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-    return google.sheets({ version: 'v4', auth });
+export async function callBridge(command: string, payload: any = {}) {
+    if (!GOOGLE_SCRIPT_URL) {
+        console.error("GOOGLE_SCRIPT_URL is not set");
+        return { status: "error", message: "GOOGLE_SCRIPT_URL missing" };
+    }
+
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                key: SECRET_KEY,
+                command,
+                payload
+            })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Error calling bridge:", error);
+        return { status: "error", message: String(error) };
+    }
 }
-
-export const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || '19YwVcGBZmTPkx-RHq-XoYKacuHliYa_tsCiN7Zc9b9M';
