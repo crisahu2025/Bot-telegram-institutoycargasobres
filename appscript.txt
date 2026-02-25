@@ -118,6 +118,8 @@ function mainKeyboard(mostrarConsulta = false) {
   botones.push([{ text: "Cargar sobre de espiga" }]);
   botones.push([{ text: "📚 Inscripción al Instituto Bíblico Horeb" }]);
   botones.push([{ text: "🙏 Enviar petición de oración" }]);
+  botones.push([{ text: "NUEVOS DE ESPIGAS" }]);
+  botones.push([{ text: "🎁 Donaciones / Ofrendas" }]);
   botones.push([{ text: "Terminar" }]);
   
   return {
@@ -157,6 +159,17 @@ function instMenuKeyboard() {
       [{ text: "Inscribirme al año completo" }],
       [{ text: "Añadir materias específicas" }],
       [{ text: "Carga del comprobante de pago del mes" }],
+      [{ text: "Terminar" }]
+    ],
+    resize_keyboard: true
+  };
+}
+
+function donationKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "Ver Alias y CBU" }],
+      [{ text: "Ver Código QR" }],
       [{ text: "Terminar" }]
     ],
     resize_keyboard: true
@@ -368,7 +381,7 @@ function doPost(e) {
     
     const sheets = getSheets();
     const sheet = sheets.find(s => s.getName() === "PETICIONES");
-    const whatsappLink = sheet.getRange("G2").getValue();
+    const whatsappLink = sheet ? sheet.getRange("G2").getValue() : "";
     
     const mensaje = "🙏 ¿Cuál es el motivo de tu petición de oración?\n\nSi preferís hablar directamente con alguien:";
     
@@ -385,6 +398,29 @@ function doPost(e) {
     return;
   }
 
+  if (text === "NUEVOS DE ESPIGAS") {
+    const nuevoState = { step: "new_person_details" };
+    if (state.accesoConsulta) nuevoState.accesoConsulta = true;
+    setState(chatId, nuevoState);
+    sendMessage(chatId, "Decime los detalles de la persona nueva:", cancelKeyboard());
+    return;
+  }
+
+  if (text === "🎁 Donaciones / Ofrendas") {
+    sendMessage(chatId, "Gracias por tu generosidad. Elegí una opción:", donationKeyboard());
+    return;
+  }
+
+  if (text === "Ver Alias y CBU") {
+    sendMessage(chatId, "📍 *Datos para transferencia:*\n\n*Alias:* iglesia.espigas.horeb\n*CBU:* 0000003100012345678901\n*Banco:* Banco Provincia");
+    return;
+  }
+
+  if (text === "Ver Código QR") {
+    sendMessage(chatId, "📸 *Escaneá el código QR para donar:*\n\n(Aquí aparecerá el código QR real próximamente)");
+    return;
+  }
+
   // MENÚ
   if (!state.step) {
     sendMessage(chatId, "Hola Soy BONI 🤍\n¿En qué te puedo ayudar hoy?", mainKeyboard(false));
@@ -394,20 +430,32 @@ function doPost(e) {
   const sheets = getSheets();
 
   // ==================================================
+  // NUEVA PERSONA SÓLA
+  // ==================================================
+  if (state.step === "new_person_details") {
+    registrarPersonaNueva(text, userName);
+    clearState(chatId);
+    sendMessage(chatId, "✅ Persona nueva registrada correctamente.", mainKeyboard(state.accesoConsulta || false));
+    return;
+  }
+
+  // ==================================================
   // PETICIONES DE ORACIÓN + MAIL AUTOMÁTICO
   // ==================================================
   if (state.step === "peticion") {
     const sheet = sheets.find(s => s.getName() === "PETICIONES");
-    const fechaHora = new Date();
-    sheet.appendRow([text, fechaHora, userName]);
-    const emailDestino = sheet.getRange("D2").getValue();
+    if (sheet) {
+      const fechaHora = new Date();
+      sheet.appendRow([text, fechaHora, userName]);
+      const emailDestino = sheet.getRange("D2").getValue();
 
-    if (emailDestino) {
-      MailApp.sendEmail(
-        emailDestino,
-        "Nueva petición de oración",
-        `Se recibió una nueva petición de oración.\n\nMotivo:\n${text}\n\nUsuario:\n${userName}\n\nFecha y hora:\n${fechaHora}\n`
-      );
+      if (emailDestino) {
+        MailApp.sendEmail(
+          emailDestino,
+          "Nueva petición de oración",
+          `Se recibió una nueva petición de oración.\n\nMotivo:\n${text}\n\nUsuario:\n${userName}\n\nFecha y hora:\n${fechaHora}\n`
+        );
+      }
     }
     clearState(chatId);
     let respuesta = "🙏 Gracias por compartir tu petición.\nVamos a estar orando por vos 🤍";
