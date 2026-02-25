@@ -1,126 +1,112 @@
-import { usePrayerRequests, useEnvelopeLoads, useMinistries } from "@/hooks/use-dashboard";
+import { useGoogleSheetsDashboard } from "@/hooks/use-dashboard";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
-import { HeartHandshake, Mail, Church, ArrowRight, Loader2 } from "lucide-react";
-import { Link } from "wouter";
-import { format } from "date-fns";
+import { Loader2, HeartHandshake, Mail, Church, UserPlus, DollarSign } from "lucide-react";
 
 export default function Dashboard() {
-  const { data: requests, isLoading: reqLoading } = usePrayerRequests();
-  const { data: envelopes, isLoading: envLoading } = useEnvelopeLoads();
-  const { data: ministries, isLoading: minLoading } = useMinistries();
-
-  const isLoading = reqLoading || envLoading || minLoading;
+  const { data, isLoading, error } = useGoogleSheetsDashboard();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Sincronizando con Google Sheets...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-destructive">
+        Error al cargar los datos en vivo. Por favor intente más tarde.
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader 
-        title="Panel Control" 
-        description="Resumen de actividad del bot de la iglesia." 
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <PageHeader
+        title="Panel Administrador"
+        description="Datos en tiempo real sincronizados desde Google Sheets."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Global Stats Section */}
+      <h2 className="text-xl font-bold tracking-tight mt-8">Resumen General</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard
-          label="Total Peticiones"
-          value={requests?.length || 0}
-          icon={HeartHandshake}
-          iconColor="text-rose-500"
-        />
-        <StatCard
-          label="Carga de Sobres"
-          value={envelopes?.length || 0}
+          label="Sobres de Espiga"
+          value={data.totalEspigas}
           icon={Mail}
           iconColor="text-blue-500"
         />
         <StatCard
-          label="Ministerios Activos"
-          value={ministries?.length || 0}
+          label="Asistentes (Aprox)"
+          value={data.totalAsistentes}
           icon={Church}
-          iconColor="text-amber-500"
+          iconColor="text-indigo-500"
+        />
+        <StatCard
+          label="Nuevas Personas"
+          value={data.nuevasPersonas}
+          icon={UserPlus}
+          iconColor="text-emerald-500"
+        />
+        <StatCard
+          label="Ofrendas Totales"
+          value={`$${data.totalOfrendas.toLocaleString('es-AR')}`}
+          icon={DollarSign}
+          iconColor="text-green-600"
+        />
+        <StatCard
+          label="Peticiones de Oración"
+          value={data.peticiones}
+          icon={HeartHandshake}
+          iconColor="text-rose-500"
         />
       </div>
 
-      {/* Recent Activity Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Prayer Requests */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-border/50 flex items-center justify-between">
-            <h3 className="font-bold text-lg">Peticiones Recientes</h3>
-            <Link href="/requests">
-              <span className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer transition-colors">
-                Ver todas <ArrowRight className="w-4 h-4" />
-              </span>
-            </Link>
-          </div>
-          <div className="divide-y divide-border/50">
-            {requests?.slice(0, 5).map((req) => (
-              <div key={req.id} className="p-6 hover:bg-secondary/30 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium text-foreground">{req.user_name}</p>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{req.content}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                    {req.created_at ? format(new Date(req.created_at), 'MMM d, h:mm a') : 'Ahora'}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {(!requests || requests.length === 0) && (
-              <div className="p-8 text-center text-muted-foreground">
-                No se encontraron peticiones.
-              </div>
-            )}
-          </div>
+      {/* Ministry Breakdown */}
+      <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col mt-10">
+        <div className="p-6 border-b border-border/50 flex items-center justify-between bg-card/50">
+          <h3 className="font-bold text-lg">Reporte por Espigas (Ministerio)</h3>
         </div>
 
-        {/* Recent Envelope Loads */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-border/50 flex items-center justify-between">
-            <h3 className="font-bold text-lg">Sobres Recientes</h3>
-            <Link href="/envelopes">
-              <span className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer transition-colors">
-                Ver todos <ArrowRight className="w-4 h-4" />
-              </span>
-            </Link>
-          </div>
-          <div className="divide-y divide-border/50">
-            {envelopes?.slice(0, 5).map((env) => (
-              <div key={env.id} className="p-6 hover:bg-secondary/30 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">{env.user_name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                        {env.ministry_name || "Ministerio Desconocido"}
+        {data.ministerios.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-secondary/40 text-muted-foreground text-xs uppercase tracking-wider">
+                  <th className="p-4 font-semibold">Ministerio</th>
+                  <th className="p-4 font-semibold text-center">Cant. Sobres</th>
+                  <th className="p-4 font-semibold text-center">Asistentes</th>
+                  <th className="p-4 font-semibold text-right">Ofrendas Acumuladas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {data.ministerios.map((min, idx) => (
+                  <tr key={idx} className="hover:bg-secondary/20 transition-colors">
+                    <td className="p-4 font-medium text-foreground">{min.nombre}</td>
+                    <td className="p-4 text-center">
+                      <span className="inline-flex items-center justify-center bg-blue-500/10 text-blue-500 font-semibold px-2.5 py-0.5 rounded-full text-xs">
+                        {min.espigas}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        Líder: {env.leader_name}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                    {env.created_at ? format(new Date(env.created_at), 'MMM d') : 'Ahora'}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {(!envelopes || envelopes.length === 0) && (
-              <div className="p-8 text-center text-muted-foreground">
-                No se encontraron sobres.
-              </div>
-            )}
+                    </td>
+                    <td className="p-4 text-center text-muted-foreground">{min.asistentes}</td>
+                    <td className="p-4 text-right font-medium text-green-600">
+                      ${min.ofrendas.toLocaleString('es-AR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        ) : (
+          <div className="p-8 text-center text-muted-foreground">
+            No hay ministerios registrados en el Excel con datos aún.
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
