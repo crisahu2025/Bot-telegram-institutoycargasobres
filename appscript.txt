@@ -4,7 +4,9 @@
 
 const TELEGRAM_TOKEN = "8557005763:AAFs3AvvarCmiDYHxBAkQZuKcOUOBOmDVis";
 const SPREADSHEET_ID = "1_AtufxeQhg2IrMRWpHdhrafKEOYepsXa07mDDPm2lac";
-const DRIVE_FOLDER_ID = "1agh6iVBv-8eFSHrChnc8G-63nGkI0pWW";
+const DRIVE_FOLDER_ESPIGAS = "1agh6iVBv-8eFSHrChnc8G-63nGkI0pWW";
+const DRIVE_FOLDER_MATRICULAS = "1eJ_4TW436rr5QwDq-YP8kliZ3H43URqr";
+const DRIVE_FOLDER_PAGOS_MES = "1yJCC4hdkZV9CQXr_Nb1pHKLr-E0CMb8F";
 const EMAIL_REPORTE_GENERAL = "cris.ahu777@gmail.com"; 
 
 // ==================================================
@@ -204,7 +206,7 @@ function siNoKeyboard() {
 // ==================================================
 // FOTO
 // ==================================================
-function savePhoto(fileId) {
+function savePhoto(fileId, folderId) {
   const info = JSON.parse(
     UrlFetchApp.fetch(
       `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`
@@ -215,9 +217,24 @@ function savePhoto(fileId) {
     `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${info.result.file_path}`
   ).getBlob();
 
-  const f = DriveApp.getFolderById(DRIVE_FOLDER_ID).createFile(blob);
+  const f = DriveApp.getFolderById(folderId).createFile(blob);
   f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return f.getUrl();
+}
+
+// ==================================================
+// HELPER: ASEGURAR QUE LA HOJA EXISTA
+// ==================================================
+function conseguirOCrearHoja(nombreHoja, headers = []) {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(nombreHoja);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(nombreHoja);
+    if (headers.length > 0) {
+      sheet.appendRow(headers);
+    }
+  }
+  return sheet;
 }
 
 // ==================================================
@@ -232,9 +249,7 @@ function detectarPersonaNueva(texto) {
 // REGISTRAR PERSONA NUEVA
 // ==================================================
 function registrarPersonaNueva(textoAsistentes, userName) {
-  const sheets = getSheets();
-  const sheet = sheets.find(s => s.getName() === "NUEVOS DE ESPIGAS");
-  if (!sheet) return;
+  const sheet = conseguirOCrearHoja("NUEVOS DE ESPIGAS", ["Detalles Asistencia", "Fecha y Hora", "Usuario Registro", "Emails de Notificación"]);
   
   const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
   sheet.appendRow([textoAsistentes, fechaHora, userName]);
@@ -261,8 +276,7 @@ function esMotivoDeOracion(texto) {
 // ENVIAR PETICIÓN DE ORACIÓN
 // ==================================================
 function enviarPeticionOracion(motivo, userName) {
-  const sheets = getSheets();
-  const sheet = sheets.find(s => s.getName() === "PETICIONES");
+  const sheet = conseguirOCrearHoja("PETICIONES", ["Motivo", "Fecha y Hora", "Usuario Registro", "Email Notificación"]);
   const fechaHora = new Date();
 
   sheet.appendRow([motivo, fechaHora, userName]);
@@ -281,11 +295,9 @@ function enviarPeticionOracion(motivo, userName) {
 // REGISTRAR INSTITUTO ALUMNO
 // ==================================================
 function registrarInstituto(state, userName) {
-  const sheets = getSheets();
   const sheetName = state.inst_flow === "full_year" ? "INSTITUTO DE AÑO" : "INSTITUTO MATERIA VIRTUAL";
-  const targetSheet = sheets.find(s => s.getName() === sheetName);
+  const targetSheet = conseguirOCrearHoja(sheetName, ["Nombre Alumno", "Año", "Materias", "Matrícula Anual Pagada", "Comprobante Matrícula", "Comprobante Mes", "Fecha y Hora", "Usuario Telegram"]);
   
-  if (!targetSheet) return;
   const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
   
   targetSheet.appendRow([
@@ -301,9 +313,7 @@ function registrarInstituto(state, userName) {
 }
 
 function registrarPagoInstituto(state, userName) {
-  const sheets = getSheets();
-  const targetSheet = sheets.find(s => s.getName() === "INSTITUTO DE AÑO");
-  if (!targetSheet) return;
+  const targetSheet = conseguirOCrearHoja("INSTITUTO DE AÑO", ["Nombre Alumno", "Año", "Materias", "Matrícula Anual Pagada", "Comprobante Matrícula", "Comprobante Mes", "Fecha y Hora", "Usuario Telegram"]);
   const fechaHora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm:ss");
   
   targetSheet.appendRow([
@@ -443,7 +453,7 @@ function doPost(e) {
   // PETICIONES DE ORACIÓN + MAIL AUTOMÁTICO
   // ==================================================
   if (state.step === "peticion") {
-    const sheet = sheets.find(s => s.getName() === "PETICIONES");
+    const sheet = conseguirOCrearHoja("PETICIONES", ["Motivo", "Fecha y Hora", "Usuario Registro", "Email Notificación"]);
     if (sheet) {
       const fechaHora = new Date();
       sheet.appendRow([text, fechaHora, userName]);
@@ -570,7 +580,7 @@ function doPost(e) {
   }
 
   if (update.message.photo && state.step === "foto") {
-    state.foto = savePhoto(update.message.photo.pop().file_id);
+    state.foto = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_ESPIGAS);
     state.step = "confirmar";
     setState(chatId, state);
 
@@ -686,7 +696,7 @@ function doPost(e) {
   }
 
   if (update.message.photo && state.step === "inst_photo_reg") {
-    state.photo_registration = savePhoto(update.message.photo.pop().file_id);
+    state.photo_registration = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_MATRICULAS);
     state.step = "inst_photo_monthly";
     setState(chatId, state);
     sendMessage(chatId, "Cargá la foto del comprobante de pago del mes:", cancelKeyboard());
@@ -694,7 +704,7 @@ function doPost(e) {
   }
 
   if (update.message.photo && state.step === "inst_photo_monthly") {
-    state.photo_monthly = savePhoto(update.message.photo.pop().file_id);
+    state.photo_monthly = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_PAGOS_MES);
     registrarInstituto(state, userName);
     clearState(chatId);
     sendMessage(chatId, "✅ Proceso completado exitosamente.\nLos datos del Instituto fueron guardados.", mainKeyboard(state.accesoConsulta || false));
@@ -710,7 +720,7 @@ function doPost(e) {
   }
 
   if (update.message.photo && state.step === "inst_pay_photo") {
-    state.photo_monthly = savePhoto(update.message.photo.pop().file_id);
+    state.photo_monthly = savePhoto(update.message.photo.pop().file_id, DRIVE_FOLDER_PAGOS_MES);
     registrarPagoInstituto(state, userName);
     clearState(chatId);
     sendMessage(chatId, "✅ Comprobante de pago guardado correctamente.", mainKeyboard(state.accesoConsulta || false));
