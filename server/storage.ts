@@ -142,7 +142,7 @@ export class SheetsStorage implements IStorage {
   // --- INSTITUTE ---
   async createEnrollment(enrollment: InsertInstituteEnrollment): Promise<InstituteEnrollment> {
     await callBridge("saveEnrollment", enrollment);
-    return { id: 0, ...enrollment, created_at: new Date() };
+    return { id: 0, ...enrollment, photo_registration: enrollment.photo_registration ?? null, photo_monthly: enrollment.photo_monthly ?? null, created_at: new Date() };
   }
 
   async getEnrollments(): Promise<InstituteEnrollment[]> {
@@ -157,7 +157,7 @@ export class SheetsStorage implements IStorage {
 
   async createPayment(payment: InsertInstitutePayment): Promise<InstitutePayment> {
     await callBridge("savePayment", payment);
-    return { id: 0, ...payment, created_at: new Date() };
+    return { id: 0, ...payment, photo_monthly: payment.photo_monthly ?? null, created_at: new Date() };
   }
 
   // --- ERROR LOGS ---
@@ -165,7 +165,7 @@ export class SheetsStorage implements IStorage {
     return [];
   }
   async createErrorLog(log: InsertErrorLog): Promise<ErrorLog> {
-    return { id: 0, ...log, created_at: new Date() };
+    return { id: 0, ...log, stack: log.stack ?? null, context: log.context ?? {}, created_at: new Date() };
   }
 }
 
